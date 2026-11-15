@@ -1,0 +1,34 @@
+{
+  "id": "messy-resume",
+  "description": "Resume text copied from a PDF with broken spacing and odd glyphs. Quotes must still match the source.",
+  "traps": [
+    "messy input"
+  ],
+  "tasks": [
+    "jdAnalysis",
+    "fineTune"
+  ],
+  "lang": "en",
+  "profile": {
+    "roles": [
+      "Product Manager"
+    ],
+    "domains": [
+      "IoT"
+    ],
+    "regions": [
+      "Ireland"
+    ],
+    "workModes": [
+      "remote"
+    ],
+    "sponsorship": false
+  },
+  "resume": "JORDAN LEE   jordan@x.com\nProduct   Manager\n SUMMARY Product manager, 6 yrs  in  IoT  and  industrial\n   sensors,  focus on  roadmap  and  customer discovery .\nWORK\n Acme   Sensors  —  Senior  PM   2019–2024\n  •   Defined   requirements  for  a  wireless  sensor  platform  used  by  OEM  customers\n  •  Ran  quarterly  planning  with  hardware ,  firmware  and  cloud  leads\n  •  Interviewed  OEM  buyers  to  size  new  feature  demand\n Delta   Controls  —  PM  2017–2019\n  •  Owned  release  schedule  for  a  building  controller\nEDUCATION  BSc  Electrical  Engineering\n",
+  "jd": "Senior Product Manager, Sensors\nSenso\nRemote (Europe)\n\nAbout the role\nYou will own the roadmap for our connected product line and work with engineering, design and partners to ship features customers value. You will talk to customers every week, decide priorities with data, and report results to leadership.\n\nResponsibilities\n- Define the product strategy and roadmap\n- Work with firmware, cloud and app teams on delivery\n- Run customer discovery and turn it into requirements\n- Measure the impact of every release and report on it\n\nRequirements\n- 5+ years of product management for IoT or industrial products\n- Experience with OEM customers\n",
+  "expect": {
+    "quotes_verbatim": true,
+    "no_invented_numbers": true,
+    "placeholders_labeled": true
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "id": "visa-already-authorised",
+  "description": "Candidate needs sponsorship elsewhere but is already authorised in Ireland, where the job is. Sponsorship must not be flagged as a risk.",
+  "traps": [
+    "work authorisation"
+  ],
+  "tasks": [
+    "jdAnalysis"
+  ],
+  "lang": "en",
+  "profile": {
+    "roles": [
+      "Product Manager"
+    ],
+    "domains": [
+      "Smart home"
+    ],
+    "regions": [
+      "Ireland"
+    ],
+    "workModes": [
+      "hybrid"
+    ],
+    "sponsorship": true,
+    "workAuthorized": [
+      "Ireland"
+    ]
+  },
+  "resume": "Alex Rivera\n[email] · [phone] · Cork\nProduct Manager | Smart home\nSUMMARY\nProduct manager for connected home devices with an engineering background in embedded software.\nEXPERIENCE\nNorthlight Devices · Product Manager · 2021 - 2024\nManaged the roadmap for the smart thermostat line together with firmware and app teams\nWorked with three ecosystem partners on certification and launch plans\nCoordinated user research sessions and turned findings into backlog items\nBrightwire Systems · Firmware Engineer · 2017 - 2021\nBuilt device drivers and over-the-air update tooling for a home gateway\nWrote test plans for new sensor modules\nSKILLS\nRoadmapping, stakeholder management, Jira, embedded C, user research\n",
+  "jd": "Product Manager, Smart Home\nCorkline\nCork, Ireland (hybrid)\n\nAbout the role\nYou will own the roadmap for our connected product line and work with engineering, design and partners to ship features customers value. You will talk to customers every week, decide priorities with data, and report results to leadership.\n\nResponsibilities\n- Define the product strategy and roadmap\n- Work with firmware, cloud and app teams on delivery\n- Run customer discovery and turn it into requirements\n- Measure the impact of every release and report on it\n\nRequirements\n- 4+ years of product management for connected hardware\n- Right to work in Ireland. No visa sponsorship is offered.\n",
+  "expect": {
+    "quotes_verbatim": true,
+    "profile_fit": {
+      "item": "sponsorship",
+      "status": "ok"
+    }
+  }
+}

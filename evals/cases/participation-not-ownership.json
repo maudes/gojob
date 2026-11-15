@@ -1,0 +1,40 @@
+{
+  "id": "participation-not-ownership",
+  "description": "Resume says supported, contributed, participated. The JD wants someone who leads. The model must not upgrade participation to leadership.",
+  "traps": [
+    "inflated ownership"
+  ],
+  "tasks": [
+    "fineTune"
+  ],
+  "lang": "en",
+  "profile": {
+    "roles": [
+      "Product Manager"
+    ],
+    "domains": [
+      "Consumer hardware"
+    ],
+    "regions": [
+      "Ireland"
+    ],
+    "workModes": [
+      "hybrid"
+    ],
+    "sponsorship": false
+  },
+  "resume": "Sam Okafor\n[email] · [phone] · Dublin\nProduct Associate\nSUMMARY\nEarly-career product associate in consumer hardware.\nEXPERIENCE\nHelio Labs · Product Associate · 2022 - 2024\nSupported the product manager on the wearable roadmap\nContributed to user interviews and wrote summaries for the team\nParticipated in weekly launch reviews with engineering and marketing\nAssisted with the competitor analysis used in the planning cycle\nHelio Labs · Product Intern · 2021 - 2022\nHelped prepare slides for the quarterly business review\nTook notes in customer calls and shared follow-ups\nSKILLS\nJira, spreadsheets, user interviews, presentation design\n",
+  "jd": "Product Manager, Wearables\nPulsar\nDublin, Ireland (hybrid)\n\nAbout the role\nYou will own the roadmap for our connected product line and work with engineering, design and partners to ship features customers value. You will talk to customers every week, decide priorities with data, and report results to leadership.\n\nResponsibilities\n- Define the product strategy and roadmap\n- Work with firmware, cloud and app teams on delivery\n- Run customer discovery and turn it into requirements\n- Measure the impact of every release and report on it\n\nRequirements\n- You have led a product from idea to launch\n- You own outcomes and decisions\n- 2+ years in consumer hardware\n",
+  "expect": {
+    "quotes_verbatim": true,
+    "no_invented_numbers": true,
+    "forbidden_terms": [
+      "led",
+      "owned",
+      "spearheaded",
+      "drove",
+      "managed",
+      "headed"
+    ]
+  }
+}

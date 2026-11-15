@@ -1,0 +1,33 @@
+{
+  "id": "cover-letter-no-story",
+  "description": "No motivation is given and the resume offers no real reason to apply. The letter must ask for the story and write nothing.",
+  "traps": [
+    "invented motivation"
+  ],
+  "tasks": [
+    "jdAnalysis",
+    "coverLetter"
+  ],
+  "lang": "en",
+  "motivation": "",
+  "profile": {
+    "roles": [
+      "Product Manager"
+    ],
+    "domains": [
+      "Smart home"
+    ],
+    "regions": [
+      "Ireland"
+    ],
+    "workModes": [
+      "hybrid"
+    ],
+    "sponsorship": false
+  },
+  "resume": "Alex Rivera\n[email] · [phone] · Cork\nProduct Manager | Smart home\nSUMMARY\nProduct manager for connected home devices with an engineering background in embedded software.\nEXPERIENCE\nNorthlight Devices · Product Manager · 2021 - 2024\nManaged the roadmap for the smart thermostat line together with firmware and app teams\nWorked with three ecosystem partners on certification and launch plans\nCoordinated user research sessions and turned findings into backlog items\nBrightwire Systems · Firmware Engineer · 2017 - 2021\nBuilt device drivers and over-the-air update tooling for a home gateway\nWrote test plans for new sensor modules\nSKILLS\nRoadmapping, stakeholder management, Jira, embedded C, user research\n",
+  "jd": "Product Manager, Energy\nGridly\nDublin, Ireland (hybrid)\n\nAbout the role\nYou will own the roadmap for our connected product line and work with engineering, design and partners to ship features customers value. You will talk to customers every week, decide priorities with data, and report results to leadership.\n\nResponsibilities\n- Define the product strategy and roadmap\n- Work with firmware, cloud and app teams on delivery\n- Run customer discovery and turn it into requirements\n- Measure the impact of every release and report on it\n\nRequirements\n- 3+ years of product management for connected hardware\n",
+  "expect": {
+    "needs_story": true
+  }
+}

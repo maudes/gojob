@@ -15,6 +15,7 @@ from . import coach as coach_mod
 from . import config, files
 from . import pipeline as pl
 from . import prompts as P
+from . import requests as R
 from . import scout as scout_mod
 from .claude import AgentError, has_credentials
 from .docx_io import docx_to_pdf, docx_to_text, text_to_docx
@@ -46,8 +47,10 @@ async def _http_error(_: Request, exc: HTTPException) -> JSONResponse:
 
 
 @app.exception_handler(RequestValidationError)
-async def _bad_request(_: Request, __: RequestValidationError) -> JSONResponse:
-    return JSONResponse({"error": "Invalid request."}, status_code=400)
+async def _bad_request(_: Request, exc: RequestValidationError) -> JSONResponse:
+    # Name the field so a wrong request can be fixed without reading the server log.
+    fields = sorted({".".join(str(p) for p in e["loc"][1:]) for e in exc.errors() if len(e["loc"]) > 1})
+    return JSONResponse({"error": f"Invalid request: check {', '.join(fields)}." if fields else "Invalid request."}, status_code=400)
 
 
 @app.exception_handler(AgentError)
@@ -110,7 +113,8 @@ def _point(g: dict) -> dict:
 
 
 @app.post("/api/run")
-def run(body: dict[str, Any] = Body(...)) -> dict:
+def run(req: R.RunBody) -> dict:
+    body = req.body()
     lang = lang_of(body)
     db = read_db()
     profile = db["profile"]
@@ -204,8 +208,9 @@ def delete_run(id: str = Query("")) -> dict:
 
 
 @app.post("/api/jd-fetch")
-def jd_fetch(body: dict[str, Any] = Body(...)) -> dict:
+def jd_fetch(req: R.JDFetchBody) -> dict:
     """Try to read a job page from its link. When nothing works the UI asks the user to paste the text."""
+    body = req.body()
     page = read_job_page(str(body.get("url") or ""))
     return {"ok": True, **page} if page else {"ok": False}
 
@@ -298,8 +303,9 @@ async def upload(file: UploadFile | None = File(None), id: str | None = Query(No
 
 
 @app.post("/api/resume-apply")
-def resume_apply(body: dict[str, Any] = Body(...)) -> dict:
+def resume_apply(req: R.ResumeApplyBody) -> dict:
     """Write the accepted tracked changes into the resume text and into the stored file."""
+    body = req.body()
     accepted = [
         {"find": c["find"], "replace": c["replace"]}
         for c in (body.get("accepted") or [])
@@ -380,7 +386,8 @@ def _clean_row(data: dict) -> dict:
 
 
 @app.post("/api/tracker")
-def tracker_add(body: dict[str, Any] = Body(...)) -> dict:
+def tracker_add(req: R.TrackerBody) -> dict:
+    body = req.body()
     row = {
         "id": new_id(), "company": "", "position": "", "location": "", "jobLink": "", "oneLine": "", "matchingScore": "",
         "applyDate": "", "networkTarget": "", "status": "Apply", "notes": "", **_clean_row(body),
@@ -394,7 +401,8 @@ def tracker_add(body: dict[str, Any] = Body(...)) -> dict:
 
 
 @app.patch("/api/tracker")
-def tracker_edit(body: dict[str, Any] = Body(...)) -> dict:
+def tracker_edit(req: R.TrackerBody) -> dict:
+    body = req.body()
     def edit(d: dict) -> list:
         row = next((r for r in d["tracker"] if r["id"] == body.get("id")), None)
         if row:
@@ -417,7 +425,8 @@ def tracker_delete(id: str | None = None) -> dict:
 
 
 @app.post("/api/feedback")
-def feedback(body: dict[str, Any] = Body(...)) -> dict:
+def feedback(req: R.FeedbackBody) -> dict:
+    body = req.body()
     message = body.get("message")
     if not isinstance(message, str) or not message.strip():
         raise fail("Empty feedback.")
@@ -442,7 +451,8 @@ COMPANY_FIELDS = ("company", "careersUrl", "why", "roleType", "contact", "notes"
 
 
 @app.post("/api/scout")
-def scout(body: dict[str, Any] = Body(...)) -> dict:
+def scout(req: R.ScoutBody) -> dict:
+    body = req.body()
     lang = lang_of(body)
     db = read_db()
     profile = db["profile"]
@@ -541,8 +551,9 @@ def scout(body: dict[str, Any] = Body(...)) -> dict:
 
 
 @app.patch("/api/scout")
-def scout_edit(body: dict[str, Any] = Body(...)) -> dict:
+def scout_edit(req: R.ScoutEditBody) -> dict:
     """Inline edits to a wish list job or a target company."""
+    body = req.body()
 
     def edit(d: dict) -> dict:
         if body.get("list") == "jobs":
@@ -582,7 +593,8 @@ def scout_delete(id: str | None = None, list: str | None = None) -> dict:  # noq
 
 
 @app.post("/api/coach")
-def coach(body: dict[str, Any] = Body(...)) -> dict:
+def coach(req: R.CoachBody) -> dict:
+    body = req.body()
     lang = lang_of(body)
     db = read_db()
     if not db["profile"]["savedAt"]:
@@ -601,6 +613,8 @@ def coach(body: dict[str, Any] = Body(...)) -> dict:
         answer = str(body.get("answer") or "").strip()
         if len(answer.split()) < 8:
             raise fail("The answer is too short to coach. Say a little more.")
+        if "prompt" not in body or "mode" not in body:
+            raise fail("Invalid request: check prompt, mode.")
         prompt = body["prompt"]
         seconds = body.get("seconds") or 0
         seconds = float(seconds) if isinstance(seconds, (int, float)) else 0
