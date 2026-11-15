@@ -259,7 +259,10 @@ export type QuoteCheck = {
 /** The outcome of the five-auditor fidelity review of one AI output. */
 export type AuditResult = { audits: Audit[]; approved: boolean; quoteCheck: QuoteCheck; demo: boolean };
 
-export type Reviewed<T> = AuditResult & { output: T; runs: number; generatedAt: string };
+/** Stamped on every AI result: which release, which prompts and which models produced it. Older results have none. */
+export type RecordMeta = { appVersion: string; promptHash: string; models: { main: string; reviewer: string } };
+
+export type Reviewed<T> = AuditResult & { output: T; runs: number; generatedAt: string; meta?: RecordMeta };
 
 export type ActionKind = "fineTune" | "coverLetter" | "interview" | "networking" | "onePager";
 
@@ -285,7 +288,7 @@ export type AnalysisRecord = {
     coverLetter?: Reviewed<CoverLetter>;
     interview?: Reviewed<Interview>;
     networking?: Reviewed<Networking>;
-    onePager?: { html: string; runs: number; demo: boolean; generatedAt: string; audit?: AuditResult };
+    onePager?: { html: string; runs: number; demo: boolean; generatedAt: string; audit?: AuditResult; meta?: RecordMeta };
   };
 };
 

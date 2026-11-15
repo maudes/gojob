@@ -126,7 +126,7 @@ export default function Page() {
         <div hidden={tab !== "coach"}><CoachTab /></div>
 
         <p className="foot">
-          {t("Self-test")}: {state.config.tests.length - failed.length}/{state.config.tests.length} {t("checks passed at start")} · {t("Writer")}: {state.config.mainModel} · {t("Auditors")}: {state.config.reviewerModel} · {t("Your data stays in this folder on your computer.")}
+          {state.config.appVersion ? `Go Job v${state.config.appVersion} · ` : ""}{t("Self-test")}: {state.config.tests.length - failed.length}/{state.config.tests.length} {t("checks passed at start")} · {t("Writer")}: {state.config.mainModel} · {t("Auditors")}: {state.config.reviewerModel} · {t("Your data stays in this folder on your computer.")}
         </p>
         <DataPanel />
       </div>

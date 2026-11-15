@@ -7,7 +7,7 @@ import { ZH } from "./zh";
 /* ---------- App state shared by the three screens ---------- */
 
 export type Lang = "en" | "zh";
-export type Config = { live: boolean; mainModel: string; reviewerModel: string; tests: { name: string; pass: boolean }[] };
+export type Config = { live: boolean; mainModel: string; reviewerModel: string; tests: { name: string; pass: boolean }[]; appVersion?: string; promptHash?: string };
 export type AppState = { profile: Profile; health: HealthRecord | null; analyses: AnalysisRecord[]; tracker: TrackerRow[]; coach: CoachData; scout: ScoutData; config: Config };
 
 export type App = {
