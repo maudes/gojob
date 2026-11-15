@@ -1,0 +1,16 @@
+# dependencies and build output
+node_modules
+.next
+next-env.d.ts
+tsconfig.tsbuildinfo
+backend/.venv
+__pycache__
+*.pyc
+.pytest_cache
+.coverage
+
+# secrets and personal data: never commit these
+.env.local
+.env*.local
+data/*.json
+data/files/
