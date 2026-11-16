@@ -1,53 +1,75 @@
 # GoJob
 
-Runs on your own computer. Five parts: profile health check, a job scan, JD matching with tailored follow-ups, an application tracker, and an interview coach.
+**A local job-search workspace that tells you which jobs are worth applying to, and never invents experience to get you there.**
 
-## Start
+Runs on your own computer. Your data stays in the `data/` folder.
 
-1. Install Node.js 20 or newer and [uv](https://docs.astral.sh/uv/) (`brew install uv`). uv fetches Python and the backend packages by itself.
-2. In this folder run `npm install`.
-3. Copy `.env.example` to `.env.local` and paste your Anthropic API key after `ANTHROPIC_API_KEY=`.
-4. Run `npm run dev` and open http://localhost:3210. This starts both the web interface (port 3210) and the Python backend (port 8000).
+## One page, five steps
 
-Without a key the app still opens, but every result is clearly marked sample output.
+| | Step | You get |
+|---|---|---|
+| 1 | **Profile** | A health check of your resume against your target job descriptions |
+| 2 | **Find jobs** | A region-by-region scan; only openings with a real link |
+| 3 | **Target JD** | Match score, tailored resume, cover letter, interview prep, networking plan |
+| 4 | **Tracker** | One row per application, ready to paste into your own sheet |
+| 5 | **Interview coach** | Practice answers from your story bank, with feedback |
 
-## Good to know
+## Why it is different
 
-- Upload your resume as `.docx` (Google Docs: File → Download → Microsoft Word). Revised resumes then keep your exact fonts and layout.
-- PDF download needs LibreOffice (`brew install --cask libreoffice`). Without it, download the `.docx` and export to PDF from Google Docs or Word.
-- Your data is stored in the `data/` folder here and is never uploaded anywhere else. What is sent to the Claude API is the text the AI works from: your profile settings, resume, LinkedIn and website text, story bank, the notes and practice answers you type, and the JD. Email addresses and phone numbers are removed first. The job scan and company research also run web searches through Claude.
-- The tracker copies a row in your sheet's column order and opens your Google Sheet in a new tab; you paste it. No Google login is stored.
-- Models can be changed in `.env.local` with `MAIN_MODEL` and `REVIEWER_MODEL`.
-- Find jobs (step 2): a headhunter scan searches the web, region by region, for openings and companies that fit the saved profile. The app opens every job link itself and drops items without a real link. Save openings to a wish list to decide later, and keep a target company table to re-check for new openings and track outreach. The scan runs when you press the button, not in the background.
-- Interview coach: load a story bank (file, pasted text, or a Google Doc / Sheet / Drive link shared as "Anyone with the link"), tick the jobs to practise for, and answer one question at a time in a 30-second or 2-minute version. Dictation works in Chrome, Edge and Safari.
-- Nothing is deleted automatically. Use "Manage saved data" at the bottom of the page to clear old jobs, tracker rows or practice history.
-- Job links are read from the job board's own API when it is Greenhouse, Ashby, Lever, SmartRecruiters or Workday. Other pages are read directly, and if that fails the link (only the link) is sent to Jina Reader, a third-party service. Set `JD_READER_FALLBACK=off` in `.env.local` to turn that off.
+- **A clear apply decision.** Average 80 or more with no reviewer below 70: apply. 60 to 79: tune first. Below 60: skip. Work-visa wording in the posting is part of the verdict.
+- **Honest by design.** Rewrites cannot add numbers, tools or titles. Code checks that every quote appears word for word in your resume or the JD, and five auditors review each answer.
+- **It knows when to stop.** Tuning only rewords what your resume already shows. When that no longer helps, the job stops at "Ceiling reached" instead of gaming the score.
+- **Local first.** One JSON file, no account, no background jobs.
+
+## How a job moves
+
+![A JD is assessed, then ready to apply, risky, or tuning; tuning loops back and ends at ceiling reached](docs/img/fit-and-tuning-states.svg)
 
 ## How it is built
 
-```
-browser ── Next.js (port 3210, screens only) ── /api/* ──▶ Python backend (FastAPI, port 8000)
-                                                            ├─ gojob/requests.py    what every request must look like
-                                                            ├─ gojob/prompts.py     every prompt (plus prompts/one-pager.md)
-                                                            ├─ gojob/pipeline.py    write → 5 auditors → quote proof → repair once
-                                                            ├─ gojob/schemas.py     what every model answer must look like
-                                                            ├─ gojob/meta.py        version / prompt / model stamp on every result
-                                                            └─ gojob/store.py       data/db.json, with a data version and upgrades
-```
+![Next.js screens, FastAPI backend, four AI roles, an audit gate, and local files](docs/img/architecture.svg)
 
-The screens (`app/`, `components/`) never call Claude. They only call `/api/...`, which Next.js passes on to the backend (`next.config.mjs`).
+The screens only draw. A Python backend does all the AI work, and every answer passes the audit gate before it is saved. More diagrams: [docs/architecture.md](docs/architecture.md).
 
-## Testing
+## Key decisions
 
-`npm test` runs the screen-helper tests (`lib/*.test.ts`, Node's built-in runner, needs Node 22.18 or newer) and the backend tests (`backend/tests`, pytest). They never call the Claude API. `npm run typecheck` checks the screens.
+| Decision | Why |
+|---|---|
+| **Fixed pipeline, not an LLM orchestrator** | Every button already says what to do, so code routes it: no extra model call, same path every time, easy to test. Only web search lets the model choose. |
+| **Strong writer, cheap auditors** | Opus writes and scores; five Haiku auditors check the result in parallel. |
+| **Proof over polish** | Quote checks are code, so they are exact and repeatable. |
+| **Measured, not assumed** | `npm run eval` runs synthetic cases built to provoke mistakes, so changes can be compared before release. |
 
-`npm run eval` measures how accurate the AI is, using synthetic cases built to provoke specific mistakes. It is separate from the tests and costs API money on a real run. See [evals/README.md](evals/README.md).
+## Make it yours
 
-## Versions and releases
+Prompts, gates and evals are plain files in the repo, so you can tune GoJob to your own search and keep every change under version control.
 
-- The release version is `version` in `package.json`, following [semantic versioning](https://semver.org/): patch for fixes, minor for new features, major for changes that break saved data.
-- Every change is described in [CHANGELOG.md](CHANGELOG.md) under the version that ships it.
-- Every AI result saved in `data/db.json` carries a `meta` stamp: the app version, a fingerprint of all prompts (`promptHash`, which changes by itself whenever a prompt is edited) and the models used. Results from before v1.0.0 have no stamp.
-- `data/db.json` has a `schemaVersion`. When a release changes its shape, `backend/gojob/store.py` upgrades older files on first read and keeps a copy as `data/db.v<old>.bak.json`.
-- To release: update `CHANGELOG.md`, run `npm test`, then `npm version minor` (or `patch` / `major`), which edits `package.json` and creates the git tag. Publish the tag as a GitHub Release and paste the changelog section as its notes.
+| What | Where |
+|---|---|
+| **Prompts**: every AI role, including how the resume is reworded with the JD's keywords | `backend/gojob/prompts.py`, `backend/gojob/prompt_templates/one-pager.md` |
+| **Gates**: the apply rule, the tuning ceiling, the audit pass mark | `backend/gojob/pipeline.py` |
+| **Evals**: traps, rubrics, your own scores | `evals/cases/`, `evals/rubrics/`, `evals/labels/` |
 
+1. Create a branch and change a prompt or a gate.
+2. Run `npm test`, then `npm run eval -- --yes`.
+3. Run `npm run eval -- --compare OLD.json NEW.json`. Any regression is flagged.
+4. Keep the change only if the checks hold, then note it in the changelog and tag a release.
+
+Every saved result carries the app version and a fingerprint of all prompts, so you can always tell which version of your prompts produced it. When a real answer goes wrong, add it as a new eval case.
+
+## Quick start
+
+1. Install Node.js 20 or newer and [uv](https://docs.astral.sh/uv/) (`brew install uv`).
+2. Run `npm install`.
+3. Copy `.env.example` to `.env.local` and add your `ANTHROPIC_API_KEY`.
+4. Run `npm run dev` and open http://localhost:3210.
+
+Without a key the app opens in sample mode, and every result says so.
+
+## Background and status
+
+GoJob grew out of **JobLens**, a FastAPI tool that used an LLM to streamline the job search. Networking, resume fine-tuning and interview prep then moved into several Claude Schedules and Projects; GoJob brings them into one page, borrowing ideas from career-ops and adjusting them to one person's own search.
+
+Version 1.0.0 plus unreleased changes. The evaluation set is built but not yet run against real model output.
+
+More: [Guide](docs/guide.md) · [Architecture](docs/architecture.md) · [Evals](evals/README.md) · [Changelog](CHANGELOG.md)

@@ -1,0 +1,18 @@
+stateDiagram-v2
+  direction LR
+  state "Assessed<br/>Three reviewers score" as Assessed
+  state "Ready to apply" as Ready
+  state "Risky<br/>Suggest not applying" as Risky
+  state "Tuning<br/>Only rewords facts the resume shows<br/>No new numbers, tools or titles<br/>Gaps marked needs_confirmation" as Tuning
+  state "Log application" as Logged
+  state "Choose another job" as Other
+  state "Ceiling reached<br/>Fine-tune disabled until a revised<br/>resume is uploaded<br/>Add real experience, or choose another job" as Ceiling
+  [*] --> Assessed: Paste a JD
+  Assessed --> Ready: Average 80+<br/>and lowest 70+
+  Assessed --> Risky: Average below 60
+  Assessed --> Tuning: Below that,<br/>average 60+
+  Ready --> Logged
+  Risky --> Other
+  Risky --> Tuning: Tune anyway
+  Tuning --> Assessed: Accept changes, re-assess
+  Tuning --> Ceiling: No evidence-backed<br/>change left, or<br/>gain under 1 point
