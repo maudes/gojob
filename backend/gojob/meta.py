@@ -10,7 +10,7 @@ from .config import MAIN_MODEL, PROMPTS_DIR, REVIEWER_MODEL, app_version
 
 @lru_cache(maxsize=1)
 def prompt_hash() -> str:
-    """A short fingerprint of every prompt (prompts.py and prompts/*.md).
+    """A short fingerprint of every prompt (prompts.py and prompt_templates/*.md).
 
     It changes by itself whenever a prompt is edited, so nobody has to remember to bump a number.
     """

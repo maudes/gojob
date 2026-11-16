@@ -51,7 +51,7 @@ export function diffOps(before: string, after: string): DiffOp[] {
 
 /** Matching gate tiers for one JD. */
 export function tier(average: number, min: number): "apply" | "tune" | "risky" {
-  if (average >= 80 && min >= 60) return "apply";
+  if (average >= 80 && min >= 70) return "apply";
   return average >= 60 ? "tune" : "risky";
 }
 

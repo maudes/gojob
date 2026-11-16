@@ -285,3 +285,23 @@ def test_errors_are_json_with_an_error_key(client):
 def test_upload_io_roundtrip_helper():
     # sanity check that the helper used above really produces a readable Word file
     assert "Sample Candidate" in docx_to_text(text_to_docx(RESUME)) and io.BytesIO(b"").read() == b""
+
+
+def test_fine_tune_is_refused_once_tuning_has_hit_its_ceiling(client, saved):
+    rec = analyze(client)
+    first = client.post("/api/run", json={"kind": "action", "lang": "en", "id": rec["id"], "action": "fineTune"}).json()["record"]
+    assert first["ceiling"] is None
+    from gojob import pipeline as pl
+    from gojob.store import update_db
+
+    def stall(d: dict) -> None:
+        r = d["analyses"][0]
+        ft = r["actions"]["fineTune"]
+        ft["evidenceBacked"] = 0  # nothing the resume supports is left
+        ft["basedOn"] = pl.text_key(r["tailoredText"] or d["profile"]["resumeText"])
+
+    update_db(stall)
+    state = client.get("/api/state").json()
+    assert state["analyses"][0]["ceiling"] == {"reason": "no_evidence_left"}
+    blocked = client.post("/api/run", json={"kind": "action", "lang": "en", "id": rec["id"], "action": "fineTune"})
+    assert blocked.status_code == 409 and "ceiling" in blocked.json()["error"]

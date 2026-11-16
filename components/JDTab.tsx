@@ -187,11 +187,12 @@ function Result({ record, onDeleted }: { record: AnalysisRecord; onDeleted: () =
         </div>
         <Working busyKey="reassess" />
         {changed && <p className="note info">{t("The resume for this JD changed since the last assessment. Re-assess to update everything below.")}</p>}
+        {record.ceiling && <p className="note bad">{ceilingText(record.ceiling, t)}</p>}
         <div className="gate">
           <div className="big">{record.gate.average.toFixed(1)}</div>
           <div className="grow">
             <div className="light"><span className={dotClass} />{t(tierLabel)}</div>
-            <div className="sub">{t("≥ 80 apply · 60 to 79 fine-tune and re-assess · below 60 risky, suggest not applying")}</div>
+            <div className="sub">{t("Apply: average ≥ 80 and every reviewer ≥ 70 · fine-tune and re-assess: average 60 or more · below 60 risky, suggest not applying")}</div>
             <div className="sub">
               {t("Assessment history")}: {record.history.map((h, i) => `v${i + 1} ${h.average.toFixed(1)}`).join(" → ")}
               {record.history.length > 1 && ` (${delta >= 0 ? "+" : ""}${delta.toFixed(1)})`}
@@ -253,6 +254,16 @@ function Result({ record, onDeleted }: { record: AnalysisRecord; onDeleted: () =
   );
 }
 
+const CEILING_TEXT = {
+  no_evidence_left: "Tuning has reached its ceiling. Every remaining suggestion needs experience the resume does not show, so rewording cannot raise the score.",
+  score_plateau: "Tuning has reached its ceiling. The last resume change raised the score by less than 1 point, so more rewording will not help.",
+} as const;
+
+function ceilingText(c: NonNullable<AnalysisRecord["ceiling"]>, t: (s: string) => string) {
+  const gain = c.gain === undefined ? "" : ` (${c.gain >= 0 ? "+" : ""}${c.gain.toFixed(1)})`;
+  return `${t(CEILING_TEXT[c.reason])}${gain} ${t("Add real experience to the resume and upload it, or choose another job.")}`;
+}
+
 function FollowUp({ record, kind, resume, onReassess, changed }: { record: AnalysisRecord; kind: ActionKind; resume: string; onReassess: () => void; changed: boolean }) {
   const { t, run, lang, putRecord, toast } = useApp();
   const [input, setInput] = useState("");
@@ -272,6 +283,7 @@ function FollowUp({ record, kind, resume, onReassess, changed }: { record: Analy
 
   if (kind === "fineTune") {
     const r = record.actions.fineTune;
+    if (!r && record.ceiling) return <div className="plain"><p className="note bad">{ceilingText(record.ceiling, t)}</p></div>;
     if (!r) return start("Fine-tune my resume for this JD", "Goes through every line and suggests tracked changes in the JD's language.");
     const applyChanges = (accepted: Accepted[], rejected: string[]) =>
       run("apply-jd", async () => {
@@ -282,7 +294,7 @@ function FollowUp({ record, kind, resume, onReassess, changed }: { record: Analy
     const o = r.output;
     return (
       <div className="plain">
-        <div className="row"><b>{t("Headline tags")}</b>{o.headlineTags.map((x) => <span className="chip" key={x}>{x}</span>)}<span className="grow" />{retry(r.runs)}</div>
+        <div className="row"><b>{t("Headline tags")}</b>{o.headlineTags.map((x) => <span className="chip" key={x}>{x}</span>)}<span className="grow" />{record.ceiling ? <span className="sub">{t("Ceiling reached")}</span> : retry(r.runs)}</div>
         <Working busyKey={busyKey} />
         <p className="sub">{t("The full resume tailored to this JD. Accept, reject or edit each change, then re-assess to see whether the score improved.")}</p>
         <ResumeReview text={resume} changes={o.changes} exportQuery={`scope=jd&id=${record.id}`} busyKey="apply-jd" onApply={applyChanges} />

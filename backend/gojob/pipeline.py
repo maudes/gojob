@@ -6,6 +6,7 @@ If it fails, the flagged items go back to the writer once and all five audit aga
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import re
@@ -28,6 +29,12 @@ AUDITOR_COUNT = len(P.AUDIT_FOCUS)
 AUDIT_PASS_ABOVE = 95
 
 EMPTY_QUOTE_CHECK = {"total": 0, "verified": 0, "failed": []}
+
+#: JD match gate: the average must reach 80 and no reviewer may score below 70.
+JD_NEED_AVERAGE = 80
+JD_NEED_MIN = 70
+#: After a resume change, the average must rise by at least this much, or the tuning has stopped paying off.
+CEILING_MIN_GAIN = 1.0
 
 
 def now_iso() -> str:
@@ -197,6 +204,47 @@ def gate(scores: list[float], need_average: float, need_min: float) -> dict:
     }
 
 
+# ---------- Tuning ceiling ----------
+
+CEILING_MESSAGE = (
+    "Tuning has reached its ceiling for this JD. What is left needs real experience, not rewording. "
+    "Add that experience to the resume and upload it, or choose another job."
+)
+
+
+def text_key(text: str) -> str:
+    return hashlib.sha1(text.encode("utf-8")).hexdigest()[:10]
+
+
+def mark_fine_tune(output: dict, resume: str) -> dict:
+    """Record which resume this fine-tune was written for and how many of its changes rest on evidence."""
+    changes = (output.get("output") or {}).get("changes") or []
+    output["basedOn"] = text_key(resume)
+    output["evidenceBacked"] = sum(1 for c in changes if c.get("label") in ("confirmed", "inference"))
+    return output
+
+
+def fit_ceiling(record: dict, profile_resume: str) -> dict | None:
+    """Has honest tuning run out for this JD? Tuning may only reword what the resume already shows,
+    so once nothing evidence-backed is left (or the score stops rising), more passes can only reword.
+
+    Returns None while tuning can still help, or when the resume changed since the last assessment
+    (new input, so nothing is known yet).
+    """
+    resume = record.get("tailoredText") or profile_resume
+    if resume != record.get("assessedText") or record["gate"]["green"]:
+        return None
+    fine_tune = (record.get("actions") or {}).get("fineTune")
+    if fine_tune and fine_tune.get("basedOn") == text_key(resume) and fine_tune.get("evidenceBacked", 1) == 0:
+        return {"reason": "no_evidence_left"}
+    history = record.get("history") or []
+    if len(history) >= 2:
+        gain = round(history[-1]["average"] - history[-2]["average"], 1)
+        if gain < CEILING_MIN_GAIN:
+            return {"reason": "score_plateau", "gain": gain}
+    return None
+
+
 # ---------- Public entry points ----------
 
 
@@ -222,14 +270,14 @@ def analyze_jd(profile: dict, resume_text: str, jd_text: str, lang: P.Lang, runs
     """Matching assessment for one JD. `resume_text` is the tailored version when there is one."""
     if not has_credentials():
         scores = [82, 85, 82] if improved else [68, 76, 71]
-        return {"analysis": demo_reviewed(demo.JD_ANALYSIS, runs), "panel": demo.panel(scores), "panelAudit": demo_audit(), "gate": gate(scores, 80, 60)}
+        return {"analysis": demo_reviewed(demo.JD_ANALYSIS, runs), "panel": demo.panel(scores), "panelAudit": demo_audit(), "gate": gate(scores, JD_NEED_AVERAGE, JD_NEED_MIN)}
     context = f"{P.profile_block(profile, resume_text)}\n{P.jd_block(jd_text)}"
     sources = {"resume": redact(resume_text), "jd": jd_text}
     with ThreadPoolExecutor(max_workers=2) as pool:
         a_f = pool.submit(reviewed, schema=JDAnalysis, role=P.JD_ROLE, context=context, sources=sources, lang=lang, runs=runs)
         p_f = pool.submit(run_panel, context, "jd", lang, sources)
         analysis, (panel, panel_audit) = a_f.result(), p_f.result()
-    return {"analysis": analysis, "panel": panel, "panelAudit": panel_audit, "gate": gate([p["score"] for p in panel], 80, 60)}
+    return {"analysis": analysis, "panel": panel, "panelAudit": panel_audit, "gate": gate([p["score"] for p in panel], JD_NEED_AVERAGE, JD_NEED_MIN)}
 
 
 def parse_loose_json(text: str, what: str = "networking agent") -> Any:

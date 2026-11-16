@@ -5,7 +5,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+### Changed
+- **The one-pager template moved** from `prompts/` at the project root to `backend/gojob/prompt_templates/`, so every prompt now lives under `backend/gojob/`. It is not called `prompts/` because that would sit beside `prompts.py` with the same name. The prompt fingerprint still covers it.
+- **Prompts now stress the target JD's keywords.** Resume changes must replace generic wording with the exact term the JD uses for the same activity, only when the resume already shows that activity; an unsupported keyword still goes to "needs confirmation". Applies to the profile health check, fine-tuning (including headline tags) and the cover letter's ability paragraph. The prompt fingerprint changes with it. No eval measures this yet.
+- **JD match gate is stricter.** Apply now needs an average of 80 and no reviewer below 70 (was 60), the same as the profile health check. Between 60 and 79 on average the tier is still "fine-tune and re-assess"; below 60 it is still "risky".
+
 ### Added
+- **Documentation.** The README is now a short product overview: the five steps, how it decides, key decisions and two diagrams. Day-to-day notes, the code map, testing and releases moved to `docs/guide.md`. `docs/architecture.md` has three diagrams (system, JD analysis sequence, apply/tune/stop states) with their Mermaid sources in `docs/diagrams/`.
+- **Tuning ceiling.** Fine-tuning may only reword what the resume already shows, so it cannot reach the threshold forever. A JD now stops at "Ceiling reached" when the latest fine-tune has no change the resume supports (every suggestion needs confirmation), or when a resume change raised the average by less than 1 point. The fine-tune button is then disabled and the backend refuses another fine-tune (409). Uploading a revised resume clears the ceiling until the next assessment.
 - **`evals/`: an evaluation set for the AI.** Ten synthetic cases built as traps (missing metrics, keywords without evidence, participation inflated to leadership, work-authorisation wording, prompt injection in a job description, cover letter with no real motivation, messy PDF text, Chinese output), eleven code graders, an optional LLM judge for usefulness, a calibration tool that compares the judge with your own scores, and run-to-run comparison that flags regressions. `npm run eval -- --help`.
 - Every run is saved with the app version, prompt fingerprint, models and git commit, so any two releases can be compared.
 - 29 tests that check the graders themselves against hand-written good and bad answers.

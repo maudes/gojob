@@ -283,6 +283,8 @@ export type AnalysisRecord = {
   panel: (PanelScore & { reviewer: string })[];
   panelAudit?: AuditResult;
   gate: Gate;
+  /** Set by the backend when honest tuning has run out for this JD. Null or absent while tuning can still help. */
+  ceiling?: { reason: "no_evidence_left" | "score_plateau"; gain?: number } | null;
   actions: {
     fineTune?: Reviewed<FineTune>;
     coverLetter?: Reviewed<CoverLetter>;

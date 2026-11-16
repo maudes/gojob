@@ -1,6 +1,6 @@
 """Every prompt the app sends to a model, in one file.
 
-The long company-research template lives in ../prompts/one-pager.md so it can be edited as plain text.
+The long company-research template lives in prompt_templates/one-pager.md so it can be edited as plain text.
 Both are fingerprinted by meta.prompt_hash(), so any edit here is stamped on the results it produces.
 """
 from __future__ import annotations
@@ -93,7 +93,8 @@ CHANGE_RULES = """How to write a resume change
 - "find" is copied character for character from ONE line of the RESUME (the whole line or part of it). Never span two lines.
 - "replace" is the complete new text for that span. To add words, repeat the found text with the addition. Facts stay the same: no new numbers, tools, scope or titles. Use [X%] style placeholders for a missing metric.
 - Keep the same length and format as the original line: a bullet stays one bullet of at most 30 words, a summary keeps its length. Active voice, no repeated leading verb.
-- "section" names where it sits (Headline, Summary, a company name, Skills). "reason" names the requirement it serves in one sentence.
+- Use the JD's own keywords. Where the resume describes an activity in generic wording, replace it with the exact term the JD (or the target JDs) use for that same activity, in the JD's spelling and form (for example "worked with data" becomes "SQL analysis" only when the resume shows that). Do this only for activities the resume already shows; a keyword the resume cannot support is never inserted, it goes to needs_confirmation. Do not repeat a keyword for its own sake.
+- "section" names where it sits (Headline, Summary, a company name, Skills). "reason" names the requirement it serves in one sentence and quotes the JD keyword it brings in.
 - label: "confirmed" when the resume already states everything in the new text, "inference" when it rewords an activity the resume shows, "needs_confirmation" when the candidate must supply or confirm something (any placeholder makes it needs_confirmation).
 - Do not propose a change that leaves the text the same."""
 
@@ -110,7 +111,7 @@ HEALTH_ROLE = (
 1. Role conflict: decide whether the expected roles belong to the same job family (Product Manager and Product Owner do; Designer and Developer do not). State the reason.
 2. Positioning: in one sentence state how the resume positions the candidate today. Then say how close that is to the truth of the experience shown, and how close it is to the roles, domains and target JDs.
 3. Keywords: mine the target JDs for the keywords and skills that repeat. For each give the number of target JDs it appears in and a status: "covered" (resume uses it, quote the line), "terminology_gap" (resume shows the activity under different wording, quote the line), or "needs_confirmation" (no resume evidence, source "none"). List the 12 to 20 most important, most frequent first.
-4. Changes: the 5 to 10 highest value edits to the resume so it is positioned for the target roles and JDs, as tracked changes.
+4. Changes: the 5 to 10 highest value edits to the resume so it is positioned for the target roles and JDs, as tracked changes. Start with every "terminology_gap" keyword: replace the resume's generic wording with the target JDs' own term.
 
 """
     + CHANGE_RULES
@@ -185,8 +186,8 @@ Judge faithfulness only. Do not judge writing quality or whether you agree with 
 
 FINE_TUNE_ROLE = (
     """Task: tailor the resume to this JD without changing any fact, as tracked changes the candidate will accept or reject.
-- headlineTags: 3 to 5 JD-aligned headline tags the resume evidence supports.
-- changes: go through the resume line by line: headline, summary, every experience and project bullet, skills. Wherever a line does not yet use the JD's language for an activity it already shows, or buries the outcome, propose a change. Leave lines that already work untouched. Expect 6 to 15 changes.
+- headlineTags: 3 to 5 headline tags built from the JD's own keywords, each one supported by resume evidence.
+- changes: go through the resume line by line: headline, summary, every experience and project bullet, skills. Wherever a line describes an activity in generic wording instead of the JD's keywords, or buries the outcome, propose a change that swaps in the JD's term. Prefer swapping words over adding sentences. Leave lines that already work untouched. Expect 6 to 15 changes.
 - bulletOrder: for each experience section list its bullets (exact resume text) from most to least relevant to this JD, list any to drop, and give the reason.
 - additions: side projects and skills that would align with this JD. "confirmed" only when the resume, LinkedIn or website text already shows them. Anything else is needs_confirmation and phrased as a question to the candidate.
 
@@ -198,7 +199,7 @@ COVER_LETTER_ROLE = """Task: cover letter.
 - coreProblem: the business, product or team problem this role exists to solve, labelled confirmed or inference.
 - The letter has three parts, in this order.
   1. Opening, short (2 to 4 sentences): first the candidate's view of the problem or direction this company is working on, built on coreProblem and the JD. Then the reason for applying, taken only from the candidate's MOTIVATION note and the resume.
-  2. Middle (one or two paragraphs): ability. Every claim carries a concrete action or result from the resume.
+  2. Middle (one or two paragraphs): ability. Every claim carries a concrete action or result from the resume, and names the skill in the JD's own words.
   3. Closing (2 to 3 sentences): a next step, and exactly one sentence on work authorisation, taken from PROFILE and the JD location. When the job is in a country where the candidate is already authorised to work, or PROFILE says no sponsorship is required, say that no sponsorship is needed. Otherwise say plainly that the candidate would need work visa sponsorship for that country. One matter-of-fact sentence, no apology, no explanation, and nowhere else in the letter.
 - If neither MOTIVATION nor the resume gives a real reason for applying, set needsStory true, say in storyRequest exactly what the candidate should tell you (why this company, why this role), and return an empty letter. Never assemble a reason from resume bullets and never invent situational detail.
 - Otherwise write the full letter in English: 3 to 4 paragraphs, 250 to 400 words, continuous prose, no bullet points, no cliches such as "I believe I would be a great fit".

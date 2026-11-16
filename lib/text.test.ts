@@ -45,10 +45,10 @@ test("tracked changes: neighbouring pieces of the same kind are merged", () => {
   for (let i = 1; i < ops.length; i++) assert.notEqual(ops[i].type, ops[i - 1].type);
 });
 
-test("JD tiers: average 80 with minimum 60 is apply, 60 is tune, below is risky", () => {
-  assert.equal(tier(80, 60), "apply");
-  assert.equal(tier(79.9, 70), "tune");
-  assert.equal(tier(85, 59), "tune");
+test("JD tiers: average 80 with minimum 70 is apply, average 60 is tune, below is risky", () => {
+  assert.equal(tier(80, 70), "apply");
+  assert.equal(tier(79.9, 75), "tune");
+  assert.equal(tier(85, 69), "tune");
   assert.equal(tier(60, 40), "tune");
   assert.equal(tier(59.9, 50), "risky");
 });

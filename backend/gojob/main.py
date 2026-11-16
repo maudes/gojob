@@ -90,7 +90,7 @@ def state() -> dict:
     return {
         "profile": db["profile"],
         "health": db["health"],
-        "analyses": db["analyses"],
+        "analyses": [_view(a, db["profile"]) for a in db["analyses"]],
         "tracker": db["tracker"],
         "coach": db["coach"],
         "scout": db["scout"],
@@ -106,6 +106,11 @@ def state() -> dict:
 
 
 # ---------- Profile, JD analysis ----------
+
+
+def _view(record: dict, profile: dict) -> dict:
+    """The record as the screen sees it: the stored fields plus whether tuning has reached its ceiling."""
+    return {**record, "ceiling": pl.fit_ceiling(record, profile["resumeText"])}
 
 
 def _point(g: dict) -> dict:
@@ -188,15 +193,19 @@ def run(req: R.RunBody) -> dict:
             else:
                 r["history"][-1] = _point(result["gate"])
 
-        return {"record": save(apply_reanalysis), "changed": changed}
+        return {"record": _view(save(apply_reanalysis), profile), "changed": changed}
 
     if kind == "setTarget":
-        return {"record": save(lambda r: r.__setitem__("networkTarget", str(body.get("target") or "")[:200]))}
+        return {"record": _view(save(lambda r: r.__setitem__("networkTarget", str(body.get("target") or "")[:200])), profile)}
 
     action = body.get("action")
     if kind == "action" and action in ACTION_KINDS:
+        if action == "fineTune" and pl.fit_ceiling(existing, profile["resumeText"]):
+            raise fail(pl.CEILING_MESSAGE, 409)
         output = pl.run_action(action, profile, existing, lang, str(body.get("input") or ""))
-        return {"record": save(lambda r: r["actions"].__setitem__(action, output))}
+        if action == "fineTune":
+            pl.mark_fine_tune(output, existing["tailoredText"] or profile["resumeText"])
+        return {"record": _view(save(lambda r: r["actions"].__setitem__(action, output)), profile)}
     raise fail("Unknown request.")
 
 
@@ -298,7 +307,7 @@ async def upload(file: UploadFile | None = File(None), id: str | None = Query(No
         record = update_db(set_tailored)
         if not record:
             raise fail("Analysis not found.", 404)
-        return {"record": record}
+        return {"record": _view(record, read_db()["profile"])}
     return {"text": clean, "fileName": name, "format": "docx" if is_docx else "other"}
 
 
@@ -337,7 +346,7 @@ def resume_apply(req: R.ResumeApplyBody) -> dict:
         fine_tune = record["actions"].get("fineTune")
         if fine_tune:
             fine_tune["output"]["changes"] = [c for c in fine_tune["output"]["changes"] if c["find"] not in handled]
-        return {"record": record, "missedInText": missed}
+        return {"record": _view(record, db["profile"]), "missedInText": missed}
 
     result = update_db(apply)
     if result is None:

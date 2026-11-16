@@ -115,3 +115,55 @@ def test_unusable_agent_text_becomes_a_friendly_error(text):
 
     with pytest.raises(AgentError, match="did not return a usable list"):
         pl.parse_loose_json(text)
+
+
+# ---------- Tuning ceiling ----------
+
+
+def record(*, green=False, tailored="R1", assessed="R1", history=(70.0,), fine_tune=None) -> dict:
+    return {
+        "tailoredText": tailored,
+        "assessedText": assessed,
+        "gate": {"green": green},
+        "history": [{"average": a} for a in history],
+        "actions": {"fineTune": fine_tune} if fine_tune else {},
+    }
+
+
+def tune(resume: str, labels: list[str]) -> dict:
+    out = {"output": {"changes": [{"label": x} for x in labels]}}
+    return pl.mark_fine_tune(out, resume)
+
+
+def test_jd_gate_needs_average_80_and_no_reviewer_below_70():
+    assert pl.gate([80, 80, 80], pl.JD_NEED_AVERAGE, pl.JD_NEED_MIN)["green"]
+    assert not pl.gate([95, 95, 69], pl.JD_NEED_AVERAGE, pl.JD_NEED_MIN)["green"]
+    assert not pl.gate([79, 80, 80], pl.JD_NEED_AVERAGE, pl.JD_NEED_MIN)["green"]
+
+
+def test_ceiling_when_the_fine_tune_found_nothing_the_resume_supports():
+    r = record(fine_tune=tune("R1", ["needs_confirmation", "needs_confirmation"]))
+    assert pl.fit_ceiling(r, "R1") == {"reason": "no_evidence_left"}
+    assert pl.fit_ceiling(record(fine_tune=tune("R1", [])), "R1") == {"reason": "no_evidence_left"}
+
+
+def test_no_ceiling_while_evidence_backed_changes_exist_even_if_the_user_rejected_them():
+    ft = tune("R1", ["confirmed", "needs_confirmation"])
+    ft["output"]["changes"] = []  # the user accepted or rejected everything
+    assert pl.fit_ceiling(record(fine_tune=ft), "R1") is None
+
+
+def test_ceiling_when_a_resume_change_barely_moved_the_score():
+    stalled = pl.fit_ceiling(record(history=(71.0, 71.6), tailored="R2", assessed="R2"), "R1")
+    assert stalled == {"reason": "score_plateau", "gain": 0.6}
+    assert pl.fit_ceiling(record(history=(71.0, 69.0), tailored="R2", assessed="R2"), "R1")["gain"] == -2.0
+    assert pl.fit_ceiling(record(history=(71.0, 74.0), tailored="R2", assessed="R2"), "R1") is None
+
+
+def test_no_ceiling_when_green_or_when_the_resume_changed_since_the_assessment():
+    assert pl.fit_ceiling(record(green=True, fine_tune=tune("R1", [])), "R1") is None
+    assert pl.fit_ceiling(record(tailored="R2", assessed="R1", fine_tune=tune("R1", [])), "R1") is None
+
+
+def test_a_fine_tune_written_for_an_older_resume_does_not_set_the_ceiling():
+    assert pl.fit_ceiling(record(tailored="R2", assessed="R2", fine_tune=tune("R1", [])), "R1") is None
