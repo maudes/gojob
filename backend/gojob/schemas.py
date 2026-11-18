@@ -399,8 +399,15 @@ class ScoutRegion(Model):
     source_url: Text = ""
 
 
+class ScoutDirection(Model):
+    theme: Text = ""
+    search_for: Text = ""
+    proof: Proof = Field(default_factory=_no_proof)
+
+
 class ScoutReport(Model):
     headline: Text = ""
+    direction: Annotated[list[ScoutDirection], LooseList] = Field(default_factory=list)
     regions: Annotated[list[ScoutRegion], LooseList] = Field(default_factory=list)
     jobs: Annotated[list[ScoutJob], LooseList] = Field(default_factory=list)
     companies: Annotated[list[ScoutCompany], LooseList] = Field(default_factory=list)

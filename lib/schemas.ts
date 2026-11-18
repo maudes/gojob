@@ -397,6 +397,7 @@ export type ScoutCompany = z.infer<typeof ScoutCompany>;
 
 export const ScoutReport = z.object({
   headline: text,
+  direction: z.array(z.object({ theme: text, searchFor: text, proof })).catch([]),
   regions: z
     .array(z.object({ region: z.string(), heat: z.enum(["warming", "steady", "cooling", "unknown"]).catch("unknown"), summary: text, label, sourceUrl: text }))
     .catch([]),
@@ -455,7 +456,7 @@ export type WatchCompany = {
   people?: Reviewed<Networking>;
 };
 
-export type ScoutRun = AuditResult & { output: ScoutReport; links: Record<string, LinkStatus>; dropped: number; at: string; runs: number };
+export type ScoutRun = AuditResult & { output: ScoutReport; links: Record<string, LinkStatus>; dropped: number; at: string; runs: number; refreshes?: number };
 export type ScoutData = {
   settings: ScoutSettings | null;
   report: ScoutRun | null;

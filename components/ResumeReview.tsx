@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ResumeChange } from "@/lib/schemas";
 import { diffOps } from "@/lib/text";
-import { Btn, download, LabelBadge, useApp } from "./ui";
+import { Btn, copy, download, LabelBadge, useApp } from "./ui";
 
 type Decision = { state: "pending" | "accepted" | "rejected" | "editing"; replace: string };
 export type Accepted = { find: string; replace: string };
@@ -55,6 +55,29 @@ export function ResumeReview(props: {
   const accepted = props.changes.filter((c) => of(c).state === "accepted");
   const rejected = props.changes.filter((c) => of(c).state === "rejected");
 
+  /** The paragraph as it would read with the chosen changes applied, ready to paste over the old one. */
+  const paragraph = (i: number, include: (c: ResumeChange) => boolean): string => {
+    const line = lines[i];
+    const here = (placed.byLine.get(i) ?? []).slice().sort((a, b) => line.indexOf(a.find) - line.indexOf(b.find));
+    let out = "";
+    let cursor = 0;
+    for (const c of here) {
+      const at = line.indexOf(c.find, cursor);
+      if (at < 0) continue;
+      out += line.slice(cursor, at) + (include(c) ? of(c).replace : c.find);
+      cursor = at + c.find.length;
+    }
+    return (out + line.slice(cursor)).replace(/^\s*[•·▪●○◦*-]\s+/, "").trim();
+  };
+  const lineOf = (c: ResumeChange) => lines.findIndex((l) => l.includes(c.find));
+  const doCopy = async (text: string) =>
+    toast(t((await copy(text)) ? "Copied. In your Google Doc, select the old paragraph and paste over it." : "Copying was blocked by the browser."));
+  const copyBtn = (c: ResumeChange) => (
+    <button type="button" className="cb" aria-label={t("Copy new paragraph")} title={t("Copy new paragraph")} onClick={() => doCopy(lineOf(c) >= 0 ? paragraph(lineOf(c), (x) => x === c || of(x).state === "accepted") : of(c).replace)}>
+      {t("Copy")}
+    </button>
+  );
+
   const renderChange = (c: ResumeChange): ReactNode => {
     const d = of(c);
     const undo = (
@@ -62,7 +85,7 @@ export function ResumeReview(props: {
         ↺
       </button>
     );
-    if (d.state === "accepted") return <><span className="ok">{d.replace}</span>{undo}</>;
+    if (d.state === "accepted") return <><span className="ok">{d.replace}</span>{copyBtn(c)}{undo}</>;
     if (d.state === "rejected") return <>{c.find}{undo}</>;
     return (
       <>
@@ -72,6 +95,7 @@ export function ResumeReview(props: {
         <button type="button" className="cb" aria-label={t("Accept")} title={t("Accept")} onClick={() => set(c.find, { state: "accepted" })}>✓</button>
         <button type="button" className="cb" aria-label={t("Reject")} title={t("Reject")} onClick={() => set(c.find, { state: "rejected" })}>✕</button>
         <button type="button" className="cb" aria-label={t("Edit")} title={t("Edit")} onClick={() => set(c.find, { state: "editing" })}>✎</button>
+        {copyBtn(c)}
       </>
     );
   };
@@ -126,6 +150,7 @@ export function ResumeReview(props: {
         <button type="button" className="btn s" onClick={() => download(`/api/export?${props.exportQuery}&format=docx`, toast)}>{t("Download .docx")}</button>
         <button type="button" className="btn s" onClick={() => download(`/api/export?${props.exportQuery}&format=pdf`, toast)}>{t("Download PDF")}</button>
       </div>
+      {props.changes.length > 0 && <p className="sub">{t("Copy a changed paragraph and paste it over the old one in your Google Doc. Bullets and skills lines copy without the bullet sign.")}</p>}
       <div className="paper">{lines.map(renderLine)}</div>
       {placed.loose.length > 0 && (
         <div className="plain">

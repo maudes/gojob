@@ -19,7 +19,7 @@ from . import requests as R
 from . import scout as scout_mod
 from .claude import AgentError, has_credentials
 from .docx_io import docx_to_pdf, docx_to_text, text_to_docx
-from .extract import drive_download_url, file_to_text, html_to_text, is_safe_url
+from .extract import drive_download_url, file_to_text, google_resume_url, html_to_text, is_safe_url
 from .jobpage import read_job_page
 from .meta import prompt_hash, stamp
 from .schemas import ACTION_KINDS, COMPANY_STATUSES, TRACKER_STATUSES, WISH_DECISIONS, Profile
@@ -277,6 +277,41 @@ def put_profile(body: dict[str, Any] = Body(...)) -> dict:
 # ---------- Resume files ----------
 
 
+def _read_resume(name: str, data: bytes) -> tuple[bool, str]:
+    """(is it a Word file, its text) for an uploaded or downloaded resume. Refuses files with too little text."""
+    try:
+        is_docx = name.lower().endswith(".docx")
+        text = docx_to_text(data) if is_docx else file_to_text(name, data)
+    except Exception as err:  # noqa: BLE001
+        raise fail(str(err) or "Could not read the file.", 422) from err
+    if len(text) < 200:
+        raise fail("Could not read enough text from this file (it may be a scanned image). Upload a .docx or paste the text.", 422)
+    return is_docx, text
+
+
+@app.post("/api/resume-link")
+def resume_link(req: R.ResumeLinkBody) -> dict:
+    """Read the resume from a Google Docs / Drive link. A Google Doc is fetched as Word, so the revised resume keeps its layout."""
+    url = google_resume_url((req.link or "").strip())
+    if not url:
+        raise fail("Use a Google Docs or Google Drive link.")
+    try:
+        res = httpx.get(url, headers={"user-agent": "Mozilla/5.0 (compatible; resume-reader)"}, timeout=25, follow_redirects=True)
+    except httpx.HTTPError as err:
+        raise fail("Could not reach Google. Check your connection.", 502) from err
+    data = res.content
+    if len(data) > MAX_UPLOAD:
+        raise fail("File is larger than 8 MB.")
+    # A file that is not shared comes back as a sign-in web page, not as the document.
+    kind = "docx" if data[:2] == b"PK" else "pdf" if data[:4] == b"%PDF" else ""
+    if res.status_code >= 400 or not kind:
+        raise fail("Google did not give the file. Share it as \"Anyone with the link\" (Share → General access), or download it as Word and upload it.", 422)
+    name = "Google Doc.docx" if kind == "docx" else "Drive file.pdf"
+    is_docx, text = _read_resume(name, data)
+    files.save_source("pending", "docx" if is_docx else "other", data if is_docx else text)
+    return {"text": redact(text), "fileName": name, "format": "docx" if is_docx else "other"}
+
+
 @app.post("/api/upload")
 async def upload(file: UploadFile | None = File(None), id: str | None = Query(None)) -> dict:
     """Resume upload. Without `id` it is the profile resume (pending until saved); with `id` it is the revised resume for one JD."""
@@ -286,13 +321,7 @@ async def upload(file: UploadFile | None = File(None), id: str | None = Query(No
     if len(data) > MAX_UPLOAD:
         raise fail("File is larger than 8 MB.")
     name = file.filename or ""
-    try:
-        is_docx = name.lower().endswith(".docx")
-        text = docx_to_text(data) if is_docx else file_to_text(name, data)
-    except Exception as err:  # noqa: BLE001
-        raise fail(str(err) or "Could not read the file.", 422) from err
-    if len(text) < 200:
-        raise fail("Could not read enough text from this file (it may be a scanned image). Upload a .docx or paste the text.", 422)
+    is_docx, text = _read_resume(name, data)
     scope = f"jd-{id}" if id else "pending"
     files.save_source(scope, "docx" if is_docx else "other", data if is_docx else text)
     clean = redact(text)
@@ -487,6 +516,22 @@ def scout(req: R.ScoutBody) -> dict:
             return d["scout"]
 
         return {"scout": update_db(save_run)}
+
+    if kind == "refresh":
+        need_profile(profile)
+        report_now = db["scout"]["report"]
+        if not report_now:
+            raise fail("Run a scan first.")
+        part = body.get("part")
+        if part not in ("jobs", "companies"):
+            raise fail("Unknown request.")
+        refreshed = scout_mod.refresh_part(profile, db["scout"]["settings"] or scout_mod.default_settings(profile), report_now, part, lang)
+
+        def save_refresh(d: dict) -> dict:
+            d["scout"]["report"] = refreshed
+            return d["scout"]
+
+        return {"scout": update_db(save_refresh)}
 
     if kind == "saveJob":
         given = body.get("job") or {}

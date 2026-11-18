@@ -1,0 +1,266 @@
+{
+ "id": "jd-analysis-cloudwise",
+ "description": "A correct matching assessment of the same resume and JD. Faults alter a JD quote, fake resume evidence, overstate the verdict or misstate the profile.",
+ "task": "jdAnalysis",
+ "lang": "en",
+ "profile": {
+  "roles": [
+   "Product Manager"
+  ],
+  "domains": [
+   "Smart home"
+  ],
+  "regions": [
+   "Ireland"
+  ],
+  "workModes": [
+   "hybrid"
+  ],
+  "sponsorship": false
+ },
+ "resume": "Alex Rivera\n[email] · [phone] · Cork\nProduct Manager | Smart home\nSUMMARY\nProduct manager for connected home devices with an engineering background in embedded software.\nEXPERIENCE\nNorthlight Devices · Product Manager · 2021 - 2024\nManaged the roadmap for the smart thermostat line together with firmware and app teams\nWorked with three ecosystem partners on certification and launch plans\nCoordinated user research sessions and turned findings into backlog items\nBrightwire Systems · Firmware Engineer · 2017 - 2021\nBuilt device drivers and over-the-air update tooling for a home gateway\nWrote test plans for new sensor modules\nSKILLS\nRoadmapping, stakeholder management, Jira, embedded C, user research\n",
+ "jd": "Product Manager, Platform\nCloudwise\nDublin, Ireland (hybrid)\n\nAbout the role\nYou will own the roadmap for our connected product line and work with engineering, design and partners to ship features customers value. You will talk to customers every week, decide priorities with data, and report results to leadership.\n\nResponsibilities\n- Define the product strategy and roadmap\n- Work with firmware, cloud and app teams on delivery\n- Run customer discovery and turn it into requirements\n- Measure the impact of every release and report on it\n\nRequirements\n- Hands-on experience with Kubernetes\n- Strong SQL skills for analysis\n- Experience designing and reading A/B testing results\n- 3+ years in product management\n",
+ "clean": {
+  "meta": {
+   "company": "Cloudwise",
+   "title": "Product Manager, Platform",
+   "location": "Dublin, Ireland (hybrid)",
+   "oneLine": "Own the roadmap for a connected product line and ship with engineering, design and partners."
+  },
+  "companyContext": "Cloudwise builds a connected product line; the JD says this role owns its roadmap and works with engineering, design and partners.",
+  "strategy": {
+   "verdict": "yellow",
+   "instruction": "Apply after targeted edits: the resume shows roadmap and firmware work but not Kubernetes, SQL or A/B testing."
+  },
+  "atsMatch": {
+   "score": 55,
+   "basis": "Roadmap, firmware and app team delivery are covered; Kubernetes, SQL and A/B testing are not in the resume."
+  },
+  "recruiterProbability": {
+   "score": 60,
+   "basis": "Three years of product management for connected home devices, in the same country as the job."
+  },
+  "projectedAts": {
+   "score": 62,
+   "basis": "Honest wording changes lift coverage a little; the missing tools cannot be added without evidence."
+  },
+  "requirements": [
+   {
+    "requirement": {
+     "source": "jd",
+     "quote": "Define the product strategy and roadmap"
+    },
+    "evidence": {
+     "source": "resume",
+     "quote": "Managed the roadmap for the smart thermostat line together with firmware and app teams"
+    },
+    "label": "inference",
+    "note": "Roadmap management is shown; owning the strategy is not stated."
+   },
+   {
+    "requirement": {
+     "source": "jd",
+     "quote": "Work with firmware, cloud and app teams on delivery"
+    },
+    "evidence": {
+     "source": "resume",
+     "quote": "Managed the roadmap for the smart thermostat line together with firmware and app teams"
+    },
+    "label": "inference",
+    "note": "Firmware and app teams are shown; cloud is not."
+   },
+   {
+    "requirement": {
+     "source": "jd",
+     "quote": "Hands-on experience with Kubernetes"
+    },
+    "evidence": {
+     "source": "none",
+     "quote": ""
+    },
+    "label": "needs_confirmation",
+    "note": "No evidence in the resume."
+   },
+   {
+    "requirement": {
+     "source": "jd",
+     "quote": "3+ years in product management"
+    },
+    "evidence": {
+     "source": "resume",
+     "quote": "Northlight Devices · Product Manager · 2021 - 2024"
+    },
+    "label": "confirmed",
+    "note": "2021 to 2024 is three years."
+   }
+  ],
+  "missingKeywords": [
+   {
+    "keyword": "SQL",
+    "whereToAdd": "Do not add yet",
+    "reason": "The JD asks for strong SQL skills and the resume shows none.",
+    "label": "needs_confirmation"
+   },
+   {
+    "keyword": "A/B testing",
+    "whereToAdd": "Do not add yet",
+    "reason": "The JD asks for A/B testing experience and the resume shows none.",
+    "label": "needs_confirmation"
+   },
+   {
+    "keyword": "Kubernetes",
+    "whereToAdd": "Do not add yet",
+    "reason": "The JD asks for hands-on Kubernetes and the resume shows none.",
+    "label": "needs_confirmation"
+   }
+  ],
+  "profileFit": [
+   {
+    "item": "region",
+    "status": "ok",
+    "note": "Dublin, Ireland matches the profile region Ireland."
+   },
+   {
+    "item": "sponsorship",
+    "status": "ok",
+    "note": "The profile needs no sponsorship."
+   },
+   {
+    "item": "work_mode",
+    "status": "ok",
+    "note": "The JD says hybrid and the profile accepts hybrid."
+   },
+   {
+    "item": "full_time",
+    "status": "unknown",
+    "note": "The JD does not say."
+   },
+   {
+    "item": "role",
+    "status": "ok",
+    "note": "Product Manager matches the profile role."
+   },
+   {
+    "item": "domain",
+    "status": "unknown",
+    "note": "The JD says connected product line, not smart home specifically."
+   }
+  ]
+ },
+ "faults": [
+  {
+   "id": "altered-jd-quote",
+   "describe": "A JD requirement quoted with a word changed (strategy became vision).",
+   "expectChecks": [
+    "jdQuotesVerbatim"
+   ],
+   "introduces": [
+    "product vision and roadmap"
+   ],
+   "ops": [
+    {
+     "path": "requirements.0.requirement.quote",
+     "set": "Define the product vision and roadmap"
+    }
+   ]
+  },
+  {
+   "id": "fake-resume-evidence",
+   "describe": "Resume evidence for Kubernetes that does not exist, labelled confirmed.",
+   "expectChecks": [
+    "resumeQuotesVerbatim",
+    "noInventedFacts",
+    "labelsCorrect"
+   ],
+   "introduces": [
+    "Built Kubernetes clusters"
+   ],
+   "ops": [
+    {
+     "path": "requirements.2.evidence",
+     "set": {
+      "source": "resume",
+      "quote": "Built Kubernetes clusters for the home gateway"
+     }
+    },
+    {
+     "path": "requirements.2.label",
+     "set": "confirmed"
+    },
+    {
+     "path": "requirements.2.note",
+     "set": "Kubernetes experience is covered."
+    }
+   ]
+  },
+  {
+   "id": "confirmed-without-evidence",
+   "describe": "A requirement with no resume evidence is labelled confirmed.",
+   "expectChecks": [
+    "labelsCorrect"
+   ],
+   "introduces": [],
+   "ops": [
+    {
+     "path": "requirements.2.label",
+     "set": "confirmed"
+    }
+   ]
+  },
+  {
+   "id": "invented-experience-in-basis",
+   "describe": "A score basis that claims team leadership the resume does not show.",
+   "expectChecks": [
+    "noInventedFacts"
+   ],
+   "introduces": [
+    "team of 12"
+   ],
+   "ops": [
+    {
+     "path": "recruiterProbability.basis",
+     "set": "Led a team of 12 product managers across three markets."
+    }
+   ]
+  },
+  {
+   "id": "wrong-region",
+   "describe": "The profile fit row names a city the JD never mentions.",
+   "expectChecks": [
+    "noInventedFacts",
+    "alignedWithProfile"
+   ],
+   "introduces": [
+    "Berlin"
+   ],
+   "ops": [
+    {
+     "path": "profileFit.0.note",
+     "set": "Berlin, Germany matches the profile region."
+    }
+   ]
+  },
+  {
+   "id": "verdict-contradicts-evidence",
+   "describe": "Verdict green and 'every requirement is covered' while three requirements have no evidence.",
+   "expectChecks": [
+    "labelsCorrect",
+    "noInventedFacts",
+    "alignedWithProfile"
+   ],
+   "introduces": [
+    "every requirement is covered"
+   ],
+   "ops": [
+    {
+     "path": "strategy.verdict",
+     "set": "green"
+    },
+    {
+     "path": "strategy.instruction",
+     "set": "Apply now: every requirement is covered."
+    }
+   ]
+  }
+ ]
+}

@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT), str(ROOT / "backend")]
 
 from evals import graders  # noqa: E402
+from evals.common import print_skill_changes  # noqa: E402
 from gojob import pipeline as pl  # noqa: E402
 from gojob.claude import has_credentials  # noqa: E402
 from gojob.meta import stamp  # noqa: E402
@@ -147,6 +148,7 @@ def print_report(run: dict) -> None:
 def compare(a_path: str, b_path: str) -> int:
     a, b = (json.loads(Path(p).read_text("utf8")) for p in (a_path, b_path))
     print(f"A: v{a['meta']['appVersion']} prompts {a['meta']['promptHash']} {a['meta']['git']}   B: v{b['meta']['appVersion']} prompts {b['meta']['promptHash']} {b['meta']['git']}")
+    print_skill_changes(a["meta"], b["meta"])
     print(f"{'check':28} {'A':>8} {'B':>8}  change")
     regressions = 0
     for name in sorted(set(a["summary"]["checks"]) | set(b["summary"]["checks"])):

@@ -65,6 +65,9 @@ def _demo_report(profile: dict, settings: dict) -> dict:
     first_region = settings["regions"][0] if settings["regions"] else "Remote"
     return {
         "headline": "Sample result. A real scan searches each region for openings and market signals that fit your profile.",
+        "direction": [
+            {"theme": f"Sample: {domain}", "searchFor": f"Sample: {role} roles close to the work this resume line shows.", "proof": proof},
+        ],
         "regions": [
             {
                 "region": r,
@@ -101,7 +104,7 @@ def run_scout(profile: dict, settings: dict, history: list[dict], lang: P.Lang, 
         if datetime.fromisoformat(h["at"].replace("Z", "+00:00")).timestamp() >= week_ago
     )
     context = f"{P.profile_block(profile)}\n{P.scout_settings_block(settings, previous)}"
-    text = run_with_search(system=P.system(P.SCOUT_ROLE, lang), user=context, max_searches=min(30, 8 + len(settings["regions"]) * 4), max_tokens=24000)
+    text = run_with_search(system=P.system(P.skill("scout"), lang), user=context, max_searches=min(30, 8 + len(settings["regions"]) * 4), max_tokens=24000)
     try:
         parsed = ScoutReport.model_validate(parse_loose_json(text, "headhunter agent")).dump()
     except ValueError as err:
@@ -115,6 +118,54 @@ def run_scout(profile: dict, settings: dict, history: list[dict], lang: P.Lang, 
         audit, links = audit_f.result(), links_f.result()
     audit.pop("output")
     return {**audit, "output": output, "links": links, "dropped": dropped, "at": at, "runs": runs, "meta": stamp()}
+
+
+def _audit_and_links(output: dict, context: str, profile: dict, lang: P.Lang, urls: list[str]) -> tuple[dict, dict[str, str]]:
+    sources = {"resume": redact(profile["resumeText"]), "jd": ""}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        audit_f = pool.submit(with_audit, produce=lambda _e: output, context=context, lang=lang, repair=False, note=AUDIT_NOTE, check=lambda o: check_quotes(o, sources))
+        links_f = pool.submit(verify_links, urls)
+        audit, links = audit_f.result(), links_f.result()
+    audit.pop("output")
+    return audit, links
+
+
+def refresh_part(profile: dict, settings: dict, report: dict, part: str, lang: P.Lang) -> dict:
+    """Replace only the openings or only the companies with items not shown before in this scan."""
+    old = report["output"]
+    shown = dict(report.get("shown") or {"jobs": [], "companies": []})
+    current = [j["url"] for j in old["jobs"]] if part == "jobs" else [c["company"] for c in old["companies"]]
+    shown[part] = list(dict.fromkeys([*shown.get(part, []), *current]))
+    refreshes = report.get("refreshes", 0) + 1
+
+    if not has_credentials():
+        fresh = _demo_report(profile, settings)
+        if part == "jobs":
+            items = [{**j, "company": f"{j['company']} ({refreshes + 1})", "url": f"{j['url']}-r{refreshes}"} for j in fresh["jobs"]]
+            links = {j["url"]: "sample" for j in items}
+        else:
+            items = [{**c, "company": f"{c['company']} ({refreshes + 1})"} for c in fresh["companies"]]
+            links = report["links"]
+        return {**report, "output": {**old, part: items}, "links": links, "shown": shown, "refreshes": refreshes}
+
+    context = f"{P.profile_block(profile)}\n{P.scout_settings_block(settings, '')}"
+    user = f"{context}\n{P.scout_refresh_block(part, old.get('direction') or [], shown[part])}"
+    text = run_with_search(system=P.system(P.skill("scout"), lang), user=user, max_searches=12, max_tokens=12000)
+    try:
+        parsed = ScoutReport.model_validate(parse_loose_json(text, "headhunter agent")).dump()
+    except ValueError as err:
+        raise AgentError("The headhunter agent did not return a usable list. Retry.") from err
+    dropped = report.get("dropped", 0)
+    if part == "jobs":
+        kept, dropped = keep_linked(parsed["jobs"])
+        seen = set(shown["jobs"])
+        items = [j for j in kept if j["url"] not in seen][:MAX_JOBS]
+    else:
+        seen = {c.strip().lower() for c in shown["companies"]}
+        items = [c for c in parsed["companies"] if c["company"].strip().lower() not in seen][:MAX_COMPANIES]
+    output = {**old, part: items}
+    audit, links = _audit_and_links(output, context, profile, lang, [j["url"] for j in output["jobs"]])
+    return {**report, **audit, "output": output, "links": links, "dropped": dropped, "shown": shown, "refreshes": refreshes, "meta": stamp()}
 
 
 def check_company(profile: dict, company: dict, lang: P.Lang) -> dict:
@@ -139,7 +190,7 @@ def check_company(profile: dict, company: dict, lang: P.Lang) -> dict:
             "audit": demo_audit(),
         }
     context = f"{P.profile_block(profile)}\n<COMPANY>\nName: {company['company']}\nCareers page: {company['careersUrl'] or '(not given, search for it)'}\n</COMPANY>"
-    text = run_with_search(system=P.system(P.COMPANY_WATCH_ROLE, lang), user=context, max_searches=6, max_tokens=8000)
+    text = run_with_search(system=P.system(P.skill("company-watch"), lang), user=context, max_searches=6, max_tokens=8000)
     try:
         parsed = CompanyOpenings.model_validate(parse_loose_json(text, "headhunter agent")).dump()
     except ValueError as err:

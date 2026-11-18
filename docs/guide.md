@@ -4,7 +4,8 @@ Day-to-day notes, the code map, testing and the release routine. For the product
 
 ## Good to know
 
-- Upload your resume as `.docx` (Google Docs: File → Download → Microsoft Word). Revised resumes then keep your exact fonts and layout.
+- Keep your resume in Google Docs and paste its link in the profile, shared as "Anyone with the link", then press **Fetch from link**. The app downloads it as Word, so the file keeps your layout; fetch again after you edit the doc. It can read your doc but never edit it (it does not sign in to Google): download the revised resume and paste the changes back. Or upload a `.docx` yourself (Google Docs: File → Download → Microsoft Word). Revised resumes then keep your exact fonts and layout: only the words inside existing text runs change, so fonts, colours, margins, tab stops, borders and bullets stay as they are.
+- **The layout is locked.** A tracked change can only reword the headline, the summary, bullets and skills lines. It never lands on the name, the contact line, section titles, or the employer, job title, date, place and school lines, and the prompt tells the model not to add lines or make lines longer so the resume stays on its current number of pages. Changing the layout takes an explicit request from you.
 - PDF download needs LibreOffice (`brew install --cask libreoffice`). Without it, download the `.docx` and export to PDF from Google Docs or Word.
 - Your data is stored in the `data/` folder here and is never uploaded anywhere else. What is sent to the Claude API is the text the AI works from: your profile settings, resume, LinkedIn and website text, story bank, the notes and practice answers you type, and the JD. Email addresses and phone numbers are removed first. The job scan and company research also run web searches through Claude.
 - The tracker copies a row in your sheet's column order and opens your Google Sheet in a new tab; you paste it. No Google login is stored.
@@ -19,7 +20,9 @@ Day-to-day notes, the code map, testing and the release routine. For the product
 ```
 browser ── Next.js (port 3210, screens only) ── /api/* ──▶ Python backend (FastAPI, port 8000)
                                                             ├─ gojob/requests.py    what every request must look like
-                                                            ├─ gojob/prompts.py     every prompt (plus prompt_templates/one-pager.md)
+                                                            ├─ gojob/skills/        every prompt, one plain-text file per skill
+                                                            ├─ gojob/skills.py      loads a skill or one part of it, pastes includes, fills variables
+                                                            ├─ gojob/prompts.py     the data blocks around a prompt, and which skill to use
                                                             ├─ gojob/pipeline.py    write → 5 auditors → quote proof → repair once
                                                             ├─ gojob/schemas.py     what every model answer must look like
                                                             ├─ gojob/meta.py        version / prompt / model stamp on every result
@@ -38,7 +41,7 @@ The screens (`app/`, `components/`) never call Claude. They only call `/api/...`
 
 - The release version is `version` in `package.json`, following [semantic versioning](https://semver.org/): patch for fixes, minor for new features, major for changes that break saved data.
 - Every change is described in [CHANGELOG.md](../CHANGELOG.md) under the version that ships it.
-- Every AI result saved in `data/db.json` carries a `meta` stamp: the app version, a fingerprint of all prompts (`promptHash`, which changes by itself whenever a prompt is edited) and the models used. Results from before v1.0.0 have no stamp.
+- Every AI result saved in `data/db.json` carries a `meta` stamp: the app version, a fingerprint of all prompts (`promptHash`, which changes by itself whenever a skill file is edited) and the models used. Results from before v1.0.0 have no stamp.
 - `data/db.json` has a `schemaVersion`. When a release changes its shape, `backend/gojob/store.py` upgrades older files on first read and keeps a copy as `data/db.v<old>.bak.json`.
 - To release: update `CHANGELOG.md`, run `npm test`, then `npm version minor` (or `patch` / `major`), which edits `package.json` and creates the git tag. Publish the tag as a GitHub Release and paste the changelog section as its notes.
 

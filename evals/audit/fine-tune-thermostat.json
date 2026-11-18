@@ -1,0 +1,221 @@
+{
+ "id": "fine-tune-thermostat",
+ "description": "A correct fine-tune for a product manager resume against a JD that asks for Kubernetes, SQL and A/B testing the resume never shows. Each fault below breaks one rule the auditors exist to enforce.",
+ "task": "fineTune",
+ "lang": "en",
+ "profile": {
+  "roles": [
+   "Product Manager"
+  ],
+  "domains": [
+   "Smart home"
+  ],
+  "regions": [
+   "Ireland"
+  ],
+  "workModes": [
+   "hybrid"
+  ],
+  "sponsorship": false
+ },
+ "resume": "Alex Rivera\n[email] · [phone] · Cork\nProduct Manager | Smart home\nSUMMARY\nProduct manager for connected home devices with an engineering background in embedded software.\nEXPERIENCE\nNorthlight Devices · Product Manager · 2021 - 2024\nManaged the roadmap for the smart thermostat line together with firmware and app teams\nWorked with three ecosystem partners on certification and launch plans\nCoordinated user research sessions and turned findings into backlog items\nBrightwire Systems · Firmware Engineer · 2017 - 2021\nBuilt device drivers and over-the-air update tooling for a home gateway\nWrote test plans for new sensor modules\nSKILLS\nRoadmapping, stakeholder management, Jira, embedded C, user research\n",
+ "jd": "Product Manager, Platform\nCloudwise\nDublin, Ireland (hybrid)\n\nAbout the role\nYou will own the roadmap for our connected product line and work with engineering, design and partners to ship features customers value. You will talk to customers every week, decide priorities with data, and report results to leadership.\n\nResponsibilities\n- Define the product strategy and roadmap\n- Work with firmware, cloud and app teams on delivery\n- Run customer discovery and turn it into requirements\n- Measure the impact of every release and report on it\n\nRequirements\n- Hands-on experience with Kubernetes\n- Strong SQL skills for analysis\n- Experience designing and reading A/B testing results\n- 3+ years in product management\n",
+ "clean": {
+  "headlineTags": [
+   "Connected products",
+   "Roadmap ownership",
+   "Customer discovery"
+  ],
+  "changes": [
+   {
+    "section": "Northlight Devices",
+    "find": "Managed the roadmap for the smart thermostat line together with firmware and app teams",
+    "replace": "Managed the product roadmap for the smart thermostat line, working with firmware and app teams on delivery",
+    "reason": "The JD asks to define the roadmap and work with firmware and app teams on delivery.",
+    "label": "inference"
+   },
+   {
+    "section": "Northlight Devices",
+    "find": "Coordinated user research sessions and turned findings into backlog items",
+    "replace": "Coordinated customer discovery through user research sessions and turned findings into requirements and backlog items",
+    "reason": "The JD asks to run customer discovery and turn it into requirements.",
+    "label": "inference"
+   },
+   {
+    "section": "Northlight Devices",
+    "find": "Worked with three ecosystem partners on certification and launch plans",
+    "replace": "Worked with three ecosystem partners on certification and launch plans, reaching [X] certified products",
+    "reason": "The JD asks for measured impact; add your real number or reject this change.",
+    "label": "needs_confirmation"
+   }
+  ],
+  "bulletOrder": [
+   {
+    "section": "Northlight Devices",
+    "orderedBullets": [
+     "Managed the roadmap for the smart thermostat line together with firmware and app teams",
+     "Coordinated user research sessions and turned findings into backlog items",
+     "Worked with three ecosystem partners on certification and launch plans"
+    ],
+    "drop": [],
+    "reason": "Roadmap and customer discovery come first because the JD lists them first."
+   }
+  ],
+  "additions": [
+   {
+    "type": "skill",
+    "suggestion": "Do you have SQL or analytics experience you could add?",
+    "basis": "The JD lists SQL; the resume does not show it.",
+    "label": "needs_confirmation"
+   },
+   {
+    "type": "project",
+    "suggestion": "Have you measured the impact of a release? A short example would answer the JD's impact requirement.",
+    "basis": "The JD asks to measure the impact of every release.",
+    "label": "needs_confirmation"
+   }
+  ]
+ },
+ "faults": [
+  {
+   "id": "altered-resume-quote",
+   "describe": "A resume line quoted with one word changed (app became cloud).",
+   "expectChecks": [
+    "resumeQuotesVerbatim"
+   ],
+   "introduces": [
+    "firmware and cloud teams"
+   ],
+   "ops": [
+    {
+     "path": "changes.0.find",
+     "replace": [
+      "firmware and app teams",
+      "firmware and cloud teams"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "invented-metric",
+   "describe": "A percentage the resume does not contain, presented as confirmed.",
+   "expectChecks": [
+    "noInventedFacts",
+    "labelsCorrect"
+   ],
+   "introduces": [
+    "35%"
+   ],
+   "ops": [
+    {
+     "path": "changes.1.replace",
+     "replace": [
+      "backlog items",
+      "backlog items, cutting discovery time by 35%"
+     ]
+    },
+    {
+     "path": "changes.1.label",
+     "set": "confirmed"
+    }
+   ]
+  },
+  {
+   "id": "invented-skill",
+   "describe": "A tool the resume never shows (SQL dashboards) added to a bullet.",
+   "expectChecks": [
+    "noInventedFacts",
+    "labelsCorrect"
+   ],
+   "introduces": [
+    "SQL dashboards"
+   ],
+   "ops": [
+    {
+     "path": "changes.0.replace",
+     "replace": [
+      "on delivery",
+      "on delivery, using SQL dashboards for release analysis"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ownership-inflation",
+   "describe": "Worked with becomes Led, presented as confirmed.",
+   "expectChecks": [
+    "noInventedFacts",
+    "labelsCorrect"
+   ],
+   "introduces": [
+    "Led certification and launch plans"
+   ],
+   "ops": [
+    {
+     "path": "changes.2.replace",
+     "set": "Led certification and launch plans with three ecosystem partners"
+    },
+    {
+     "path": "changes.2.label",
+     "set": "confirmed"
+    }
+   ]
+  },
+  {
+   "id": "placeholder-marked-confirmed",
+   "describe": "A change that still contains the [X] placeholder is labelled confirmed.",
+   "expectChecks": [
+    "labelsCorrect"
+   ],
+   "introduces": [],
+   "ops": [
+    {
+     "path": "changes.2.label",
+     "set": "confirmed"
+    }
+   ]
+  },
+  {
+   "id": "headline-against-profile",
+   "describe": "A headline tag for a role the profile does not target.",
+   "expectChecks": [
+    "alignedWithProfile",
+    "noInventedFacts"
+   ],
+   "introduces": [
+    "Senior Software Engineer"
+   ],
+   "ops": [
+    {
+     "path": "headlineTags.0",
+     "set": "Senior Software Engineer"
+    }
+   ]
+  },
+  {
+   "id": "invented-experience-in-addition",
+   "describe": "An addition that claims experience the resume does not show, labelled confirmed.",
+   "expectChecks": [
+    "noInventedFacts",
+    "labelsCorrect"
+   ],
+   "introduces": [
+    "Kubernetes work at Brightwire"
+   ],
+   "ops": [
+    {
+     "path": "additions.0.suggestion",
+     "set": "Add your Kubernetes work at Brightwire to the skills line."
+    },
+    {
+     "path": "additions.0.basis",
+     "set": "Your Kubernetes work at Brightwire shows this."
+    },
+    {
+     "path": "additions.0.label",
+     "set": "confirmed"
+    }
+   ]
+  }
+ ]
+}

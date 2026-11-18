@@ -116,7 +116,7 @@ def next_question(*, profile: dict, coach: dict, records: list[dict], category: 
     recent = "\n".join(f"- {i['question']}" for i in coach["items"][:30]) or "(none)"
     jd_part = f"\n<JD>\n{jd['jdText']}\n</JD>" if category == "jd" and jd else ""
     context = (
-        f"Category: {P.COACH_CATEGORY_BRIEF[category]}\nRecurring weaknesses (last 14 days): {weak}\n\n<RECENT_QUESTIONS>\n{recent}\n</RECENT_QUESTIONS>\n"
+        f"Category: {P.skill(f"coach-question#category-{category}")}\nRecurring weaknesses (last 14 days): {weak}\n\n<RECENT_QUESTIONS>\n{recent}\n</RECENT_QUESTIONS>\n"
         f"{P.profile_block(profile)}\n<STORY_BANK>\n{redact(coach['storyBank']['text']) or '(not provided)'}\n</STORY_BANK>{jd_part}"
     )
 
@@ -125,11 +125,11 @@ def next_question(*, profile: dict, coach: dict, records: list[dict], category: 
             schema=CoachQuestion,
             model=MAIN_MODEL,
             effort="low",
-            system=f"{P.COACH_RULES}\n{P.coach_lang_rule(lang)}\n\n{P.COACH_QUESTION_TASK}",
+            system=f"{P.coach_rules(lang)}\n\n{P.skill('coach-question')}",
             user=context + extra,
         ).dump()
 
-    result = with_audit(produce=produce, context=context, lang=lang, note=P.COACH_AUDIT_NOTE + P.COACH_QUESTION_AUDIT_NOTE)
+    result = with_audit(produce=produce, context=context, lang=lang, note=P.skill("interview-coach#audit-note") + " " + P.skill("coach-question#audit-note"))
     out = result.pop("output")
     return {"category": category, "source": source, **out, "demo": False, "audit": result, "meta": stamp()}
 
@@ -163,7 +163,7 @@ def give_feedback(*, profile: dict, coach: dict, prompt: dict, mode: str, answer
             schema=CoachFeedback,
             model=MAIN_MODEL,
             effort="medium",
-            system=f"{P.COACH_RULES}\n{P.coach_lang_rule(lang)}\n\n{P.coach_feedback_task(lo, hi)}",
+            system=f"{P.coach_rules(lang)}\n\n{P.coach_feedback_task(lo, hi)}",
             user=context + extra,
         ).dump()
 
@@ -175,7 +175,7 @@ def give_feedback(*, profile: dict, coach: dict, prompt: dict, mode: str, answer
         failed = [{"source": "answer", "quote": q} for q in quotes if not is_verbatim(q, redacted_answer)]
         return {"total": len(quotes), "verified": len(quotes) - len(failed), "failed": failed}
 
-    result = with_audit(produce=produce, context=context, lang=lang, note=P.COACH_AUDIT_NOTE, check=check)
+    result = with_audit(produce=produce, context=context, lang=lang, note=P.skill("interview-coach#audit-note"), check=check)
     out = result.pop("output")
     return {**out, "score": clamp_score(out["score"])}, result
 
@@ -211,11 +211,11 @@ def weekly_report(coach: dict, lang: P.Lang, now: float | None = None) -> dict:
             schema=CoachReport,
             model=MAIN_MODEL,
             effort="medium",
-            system=f"{P.COACH_RULES}\n{P.coach_lang_rule(lang)}\n\n{P.COACH_REPORT_TASK}",
+            system=f"{P.coach_rules(lang)}\n\n{P.skill('coach-report')}",
             user=context + extra,
         ).dump()
 
-    result = with_audit(produce=produce, context=context, lang=lang, note=P.COACH_REPORT_AUDIT_NOTE)
+    result = with_audit(produce=produce, context=context, lang=lang, note=P.skill("coach-report#audit-note"))
     output = result.pop("output")
     return {**base, "demo": False, "output": output, "audit": result, "meta": stamp()}
 

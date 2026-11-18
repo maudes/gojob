@@ -7,12 +7,12 @@ import pytest
 
 from gojob import config, store
 from gojob.docx_io import apply_changes_to_docx, docx_to_text, text_to_docx
-from gojob.extract import drive_download_url, html_to_text, is_safe_url
-from gojob.meta import prompt_hash, stamp
+from gojob.extract import drive_download_url, google_resume_url, html_to_text, is_safe_url
+from gojob.meta import prompt_hash, skill_hashes, stamp
 from gojob.pipeline import check_quotes, gate, is_approved, round_half_up
 from gojob.scout import keep_linked
 from gojob.selftest import self_test
-from gojob.text import apply_to_text, is_verbatim, redact
+from gojob.text import apply_to_text, editable_lines, is_layout_line, is_verbatim, keep_editable, redact
 
 
 def test_every_runtime_selftest_passes():
@@ -138,15 +138,12 @@ def test_stamp_names_release_prompts_and_models():
     assert set(s["models"]) == {"main", "reviewer"}
 
 
-def test_prompt_hash_changes_when_a_prompt_file_changes(tmp_path, monkeypatch):
-    (tmp_path / "one-pager.md").write_text("v1")
-    monkeypatch.setattr("gojob.meta.PROMPTS_DIR", tmp_path)
-    prompt_hash.cache_clear()
+def test_prompt_hash_changes_when_a_skill_file_changes(tmp_path, monkeypatch):
+    monkeypatch.setattr("gojob.meta.SKILLS_DIR", tmp_path)
+    (tmp_path / "demo.md").write_text("v1")
     before = prompt_hash()
-    (tmp_path / "one-pager.md").write_text("v2")
-    prompt_hash.cache_clear()
+    (tmp_path / "demo.md").write_text("version 2")  # no restart and no cache to clear
     assert prompt_hash() != before
-    prompt_hash.cache_clear()
 
 
 def test_old_database_is_upgraded_and_backed_up(isolated):
@@ -189,3 +186,99 @@ def test_wire_names_match_what_the_browser_and_prompts_use():
         if (info.alias or field) not in known
     ]
     assert bad == []
+
+
+# ---------- layout lock: wording changes never land on structure lines ----------
+
+RESUME = """Alex Example
+Product Manager · IoT Ecosystems · Partner Integrations
+Cork → Berlin · [email] · LinkedIn · Portfolio
+SUMMARY
+Platform PM with 6+ years aligning connected hardware platforms with partner ecosystems and certification programs.
+EXPERIENCE
+Northlight Devices Cork, Ireland
+Product Manager, Platform Delivery Nov 2025 – Present
+Own client-facing delivery for retail programs and the platform roadmap, establishing a stakeholder layer with five milestones.
+Scoped PKI engineering effort for OEM partners, including an industry certification, 2022–2023, and a cross-team defect review process.
+2024 Q2 Excellence Award · 2022 Annual Excellence Award — Northlight Devices Business Unit
+EDUCATION
+Example University Cork, Ireland B.A. in Journalism, Minor in Political Science
+SKILLS
+Technical: Python · SQL · Git · REST APIs · LLM APIs · Matter · Thread
+"""
+
+
+def test_structure_lines_are_locked_and_wording_lines_are_not():
+    lines = [ln for ln in RESUME.split("\n") if ln.strip()]
+    locked = {ln for i, ln in enumerate(lines) if is_layout_line(ln, i == 0, i == 1)}
+    assert {"Alex Example", "SUMMARY", "EXPERIENCE", "EDUCATION", "Northlight Devices Cork, Ireland"} <= locked
+    assert any("Nov 2025 – Present" in ln for ln in locked) and any("Example University" in ln for ln in locked) and any("Excellence Award" in ln for ln in locked)
+    assert any("[email]" in ln for ln in locked)
+    free = set(lines) - locked
+    assert any(ln.startswith("Platform PM with") for ln in free) and any(ln.startswith("Own client-facing") for ln in free)
+    assert any(ln.startswith("Technical:") for ln in free) and any(ln.startswith("Product Manager · IoT") for ln in free)  # skills and the headline may be reworded
+
+
+def test_a_date_range_inside_a_long_bullet_does_not_lock_the_bullet():
+    bullet = next(ln for ln in RESUME.split("\n") if "industry certification" in ln)
+    assert not is_layout_line(bullet)
+
+
+def test_keep_editable_drops_only_changes_on_structure_lines():
+    changes = [
+        {"find": "Product Manager, Platform Delivery Nov 2025", "replace": "x"},
+        {"find": "Northlight Devices", "replace": "x"},
+        {"find": "Own client-facing delivery", "replace": "Led client-facing delivery"},
+        {"find": "Not in the resume at all", "replace": "y"},  # unplaceable text is left for the quote check to flag
+    ]
+    kept, dropped = keep_editable(changes, RESUME)
+    assert dropped == 2 and [c["replace"] for c in kept] == ["Led client-facing delivery", "y"]
+
+
+def test_sample_changes_never_pick_a_structure_line():
+    from gojob.demo import health
+
+    for change in health(RESUME)["changes"]:
+        line = next(ln for ln in RESUME.split("\n") if change["find"] in ln)
+        assert line in editable_lines(RESUME)
+    sample_header_first = "Sample Lighting Co · Product Manager · 2021 - 2024\n" + RESUME
+    assert all(not c["find"].startswith("Sample Lighting") for c in health(sample_header_first)["changes"])
+
+
+def test_google_resume_link_becomes_a_word_download():
+    doc = "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdEFG/edit?tab=t.0"
+    assert google_resume_url(doc) == "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdEFG/export?format=docx"
+    assert google_resume_url("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdEFG/view").startswith("https://drive.google.com/uc?export=download&id=")
+    for other in ("https://docs.google.com/spreadsheets/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdEFG/edit", "https://example.com/a.docx", "http://localhost/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdEFG", ""):
+        assert google_resume_url(other) is None
+
+
+def test_each_skill_has_its_own_fingerprint_that_follows_what_it_includes(tmp_path, monkeypatch):
+    monkeypatch.setattr("gojob.meta.SKILLS_DIR", tmp_path)
+    monkeypatch.setattr("gojob.skills.SKILLS_DIR", tmp_path)
+
+    def write(name: str, body: str) -> None:
+        (tmp_path / f"{name}.md").write_text(f"---\nname: {name}\ndescription: a test skill for fingerprints\n---\n\n{body}")
+
+    write("shared", "## part: x\n\nrule x\n\n## part: y\n\nrule y\n")
+    write("a", "Task A.\n\n{{include:shared#x}}")
+    write("b", "Task B.")
+    base = skill_hashes()
+    assert set(base) == {"shared", "a", "b"} and all(len(h) == 6 for h in base.values())
+
+    write("shared", "## part: x\n\nrule x\n\n## part: y\n\nrule y changed\n")  # a part that `a` does not include
+    after_y = skill_hashes()
+    assert after_y["a"] == base["a"] and after_y["b"] == base["b"] and after_y["shared"] != base["shared"]
+
+    write("shared", "## part: x\n\nrule x changed\n\n## part: y\n\nrule y changed\n")  # the part `a` includes
+    after_x = skill_hashes()
+    assert after_x["a"] != base["a"] and after_x["shared"] != after_y["shared"] and after_x["b"] == base["b"]
+
+    write("b", "Task B, reworded.")
+    assert skill_hashes()["b"] != after_x["b"] and skill_hashes()["a"] == after_x["a"]
+
+
+def test_real_skills_have_fingerprints_and_the_stamp_carries_them():
+    hashes = skill_hashes()
+    assert {"audit", "health-check", "shared-rules", "scout"} <= set(hashes)
+    assert stamp()["skills"] == hashes

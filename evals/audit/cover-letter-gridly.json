@@ -1,0 +1,209 @@
+{
+ "id": "cover-letter-gridly",
+ "description": "A correct cover letter built from the resume, the candidate's own motivation note and the profile. Faults invent details, numbers, employers or a wrong work authorisation sentence.",
+ "task": "coverLetter",
+ "lang": "en",
+ "profile": {
+  "roles": [
+   "Product Manager"
+  ],
+  "domains": [
+   "Smart home"
+  ],
+  "regions": [
+   "Ireland"
+  ],
+  "workModes": [
+   "hybrid"
+  ],
+  "sponsorship": false
+ },
+ "resume": "Alex Rivera\n[email] · [phone] · Cork\nProduct Manager | Smart home\nSUMMARY\nProduct manager for connected home devices with an engineering background in embedded software.\nEXPERIENCE\nNorthlight Devices · Product Manager · 2021 - 2024\nManaged the roadmap for the smart thermostat line together with firmware and app teams\nWorked with three ecosystem partners on certification and launch plans\nCoordinated user research sessions and turned findings into backlog items\nBrightwire Systems · Firmware Engineer · 2017 - 2021\nBuilt device drivers and over-the-air update tooling for a home gateway\nWrote test plans for new sensor modules\nSKILLS\nRoadmapping, stakeholder management, Jira, embedded C, user research\n",
+ "jd": "Product Manager, Energy\nGridly\nDublin, Ireland (hybrid)\n\nAbout the role\nYou will own the roadmap for our connected product line and work with engineering, design and partners to ship features customers value. You will talk to customers every week, decide priorities with data, and report results to leadership.\n\nResponsibilities\n- Define the product strategy and roadmap\n- Work with firmware, cloud and app teams on delivery\n- Run customer discovery and turn it into requirements\n- Measure the impact of every release and report on it\n\nRequirements\n- 3+ years of product management for connected hardware\n",
+ "motivation": "I grew up in a house where the heating was always wrong, which is why I moved from firmware into product. I want to work on energy products that people can actually understand and trust.",
+ "clean": {
+  "needsStory": false,
+  "storyRequest": "",
+  "coreProblem": {
+   "text": "Gridly needs a product manager to own the roadmap of a connected energy product line and ship it with engineering, design and partners.",
+   "label": "inference"
+  },
+  "letter": "Dear Gridly team,\n\nI grew up in a house where the heating was always wrong, which is why I moved from firmware into product. Energy products are where I want to work, because people should be able to understand and trust them.\n\nAt Northlight Devices I managed the roadmap for the smart thermostat line together with firmware and app teams, and I coordinated user research sessions and turned the findings into backlog items. I also worked with three ecosystem partners on certification and launch plans. Before that, I built over-the-air update tooling as a firmware engineer, so I know what delivery looks like from the engineering side.\n\nI would welcome a conversation about the roadmap for Gridly's connected product line. I am based in Cork and no sponsorship is needed for a role in Ireland.\n\nAlex Rivera",
+  "factCheck": [
+   {
+    "claim": "Managed the roadmap for the smart thermostat line with firmware and app teams at Northlight Devices",
+    "label": "confirmed",
+    "proof": {
+     "source": "resume",
+     "quote": "Managed the roadmap for the smart thermostat line together with firmware and app teams"
+    }
+   },
+   {
+    "claim": "Coordinated user research and turned findings into backlog items",
+    "label": "confirmed",
+    "proof": {
+     "source": "resume",
+     "quote": "Coordinated user research sessions and turned findings into backlog items"
+    }
+   },
+   {
+    "claim": "Worked with three ecosystem partners on certification and launch plans",
+    "label": "confirmed",
+    "proof": {
+     "source": "resume",
+     "quote": "Worked with three ecosystem partners on certification and launch plans"
+    }
+   },
+   {
+    "claim": "Built over-the-air update tooling as a firmware engineer",
+    "label": "confirmed",
+    "proof": {
+     "source": "resume",
+     "quote": "Built device drivers and over-the-air update tooling for a home gateway"
+    }
+   },
+   {
+    "claim": "Based in Cork",
+    "label": "confirmed",
+    "proof": {
+     "source": "resume",
+     "quote": "Cork"
+    }
+   },
+   {
+    "claim": "No sponsorship is needed for a role in Ireland",
+    "label": "confirmed",
+    "proof": {
+     "source": "profile",
+     "quote": "Visa sponsorship required: No"
+    }
+   }
+  ]
+ },
+ "faults": [
+  {
+   "id": "invented-story-detail",
+   "describe": "A dramatic detail the candidate never gave (a recall of 40,000 thermostats).",
+   "expectChecks": [
+    "noInventedFacts"
+   ],
+   "introduces": [
+    "40,000 thermostats"
+   ],
+   "ops": [
+    {
+     "path": "letter",
+     "replace": [
+      "I also worked with three ecosystem partners",
+      "I led the recall response for 40,000 thermostats in 2022. I also worked with three ecosystem partners"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "invented-number",
+   "describe": "A result number the resume does not contain.",
+   "expectChecks": [
+    "noInventedFacts"
+   ],
+   "introduces": [
+    "45%"
+   ],
+   "ops": [
+    {
+     "path": "letter",
+     "replace": [
+      "turned the findings into backlog items",
+      "turned the findings into backlog items, cutting support tickets by 45%"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "altered-factcheck-quote",
+   "describe": "A fact-check proof quote with one word changed.",
+   "expectChecks": [
+    "resumeQuotesVerbatim"
+   ],
+   "introduces": [
+    "firmware and cloud teams"
+   ],
+   "ops": [
+    {
+     "path": "factCheck.0.proof.quote",
+     "replace": [
+      "firmware and app teams",
+      "firmware and cloud teams"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "confirmed-without-proof",
+   "describe": "A claim with no proof at all, labelled confirmed.",
+   "expectChecks": [
+    "noInventedFacts",
+    "labelsCorrect"
+   ],
+   "introduces": [
+    "partner programmes in Dublin"
+   ],
+   "ops": [
+    {
+     "path": "factCheck.4",
+     "set": {
+      "claim": "Has run partner programmes in Dublin",
+      "label": "confirmed",
+      "proof": {
+       "source": "none",
+       "quote": ""
+      }
+     }
+    }
+   ]
+  },
+  {
+   "id": "wrong-work-authorisation",
+   "describe": "The letter says the candidate needs sponsorship; the profile says no sponsorship is needed.",
+   "expectChecks": [
+    "alignedWithProfile",
+    "noInventedFacts"
+   ],
+   "introduces": [
+    "would need work visa sponsorship"
+   ],
+   "ops": [
+    {
+     "path": "letter",
+     "replace": [
+      "no sponsorship is needed for a role in Ireland",
+      "I would need work visa sponsorship for a role in Ireland"
+     ]
+    },
+    {
+     "path": "factCheck.5.claim",
+     "set": "Would need work visa sponsorship for a role in Ireland"
+    }
+   ]
+  },
+  {
+   "id": "invented-employer",
+   "describe": "An employer the resume never mentions.",
+   "expectChecks": [
+    "noInventedFacts"
+   ],
+   "introduces": [
+    "Helios Energy"
+   ],
+   "ops": [
+    {
+     "path": "letter",
+     "replace": [
+      "At Northlight Devices I managed",
+      "At Northlight Devices and Helios Energy I managed"
+     ]
+    }
+   ]
+  }
+ ]
+}
