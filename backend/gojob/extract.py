@@ -77,6 +77,23 @@ def is_safe_url(raw: str) -> str | None:
     return raw
 
 
+def google_resume_url(raw: str) -> str | None:
+    """The download address for a resume kept in Google Docs (as Word, so the layout survives) or Drive.
+    Works only when the file is shared as "Anyone with the link"; the app never signs in to Google."""
+    if not is_safe_url(raw):
+        return None
+    url = urlparse(raw)
+    m = re.search(r"/d/([\w-]{20,})", url.path)
+    file_id = m.group(1) if m else (parse_qs(url.query).get("id") or [None])[0]
+    if not file_id:
+        return None
+    if url.hostname == "docs.google.com" and url.path.startswith("/document/"):
+        return f"https://docs.google.com/document/d/{file_id}/export?format=docx"
+    if url.hostname == "drive.google.com":
+        return f"https://drive.google.com/uc?export=download&id={file_id}"
+    return None
+
+
 def drive_download_url(raw: str) -> str | None:
     """Turn a Google Docs / Sheets / Drive share link into a direct download address.
     Works only when the file is shared as "Anyone with the link"."""

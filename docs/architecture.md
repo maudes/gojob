@@ -7,9 +7,9 @@ Three diagrams: how the pieces fit, what happens when you paste a job descriptio
 ![System architecture: Next.js screens, FastAPI backend, four AI roles, the audit gate, and local data files](img/architecture.svg)
 
 - The screens never call Claude. They call `/api/*`, which Next.js forwards to the Python backend (`next.config.mjs`).
-- The four AI roles are prompts and call patterns, not separate services. The writer, the review panel and the interview coach produce structured answers; the search agent also uses web search.
-- Every AI answer goes through the audit gate in `backend/gojob/pipeline.py` before it is saved. Search answers (job scan, company watch, people) are audited but not rewritten, because their facts come from the web, not from your resume.
-- All state lives in `data/db.json`; uploaded resumes live in `data/files/`. Neither leaves your machine.
+- The four AI roles are prompts and call patterns, not separate services. The prompts are plain files in `backend/gojob/skills/`, read on every call, so an edit applies without a restart. The writer, the review panel and the interview coach produce structured answers; the search agent also uses web search.
+- Every AI answer goes through the audit gate in `backend/gojob/pipeline.py` before it is saved. Resume changes first pass a layout lock that drops any change on the name, section title, employer, job title, date, place or school lines. Search answers (job scan, company watch, people) are audited but not rewritten, because their facts come from the web, not from your resume.
+- All state lives in `data/db.json`; resumes live in `data/files/`, whether uploaded or fetched from a Google Doc link as Word. Neither leaves your machine.
 
 ## 2. What happens when you paste a JD
 

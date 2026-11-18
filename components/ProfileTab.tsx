@@ -45,6 +45,14 @@ export function ProfileTab() {
       if (r.format !== "docx") toast(t("Read successfully. For a revised resume that keeps your exact layout, upload a .docx instead."));
     });
 
+  const fetchLink = () =>
+    run("resume-link", async () => {
+      const r = await send<{ text: string; fileName: string; format: "docx" | "other" }>("POST", "/api/resume-link", { link: draft.resumeLink.trim() });
+      set({ resumeText: r.text, resumeFileName: r.fileName, resumeFormat: r.format });
+      setUploaded(true);
+      toast(t(r.format === "docx" ? "Read from Google. Save the profile to use this version." : "Read the file, but it is not a Word file, so the revised resume layout will be rebuilt."));
+    });
+
   const save = () =>
     run("save", async () => {
       const r = await send<{ profile: Profile }>("PUT", "/api/profile", { ...draft, sheetUrl: state.profile.sheetUrl, promoteUpload: uploaded });
@@ -84,8 +92,12 @@ export function ProfileTab() {
               <Btn small busyKey="upload" onClick={() => fileRef.current?.click()}>{t(draft.resumeFileName ? "Replace" : "Upload file")}</Btn>
               <button type="button" className="btn s" onClick={() => setShowText((v) => !v)}>{t(showText ? "Hide text" : "View or paste text")}</button>
             </div>
-            <input type="url" id="p-resume-link" aria-label={t("Resume link")} placeholder={t("Optional: link to your resume, e.g. a Google Doc")} value={draft.resumeLink} onChange={(e) => set({ resumeLink: e.target.value })} />
-            <small className="tip">{t("Best result: upload a .docx. In Google Docs choose File → Download → Microsoft Word (.docx). The revised resume then keeps your exact fonts and layout. A PDF also works, but its layout is rebuilt and will not match exactly.")}</small>
+            <div className="row">
+              <input className="grow" type="url" id="p-resume-link" aria-label={t("Resume link")} placeholder={t("Optional: link to your resume, e.g. a Google Doc")} value={draft.resumeLink} onChange={(e) => set({ resumeLink: e.target.value })} />
+              <Btn small busyKey="resume-link" disabled={!draft.resumeLink.trim()} onClick={fetchLink}>{t("Fetch from link")}</Btn>
+            </div>
+            <small className="tip">{t("Best result: keep your resume in Google Docs and paste its link above, shared as \"Anyone with the link\" (Share → General access). The app downloads it as Word, so the revised resume keeps your exact fonts and layout. Fetch again whenever you edit the doc. Or upload a .docx (File → Download → Microsoft Word). A PDF also works, but its layout is rebuilt and will not match exactly.")}</small>
+            <small>{t("The app can read your Google Doc but cannot edit it: it never signs in to Google. Download the revised resume and paste the changes into your doc.")}</small>
             <small>{t("Contact details are removed on upload and never shown or sent to an agent.")}</small>
             {state.profile.resumeUpdatedAt && <small>{t("Resume last updated")}: {state.profile.resumeUpdatedAt.slice(0, 10)}</small>}
             {showText && <textarea id="p-resume-text" aria-label={t("Resume text")} style={{ minHeight: 220 }} value={draft.resumeText} onChange={(e) => set({ resumeText: e.target.value, resumeFileName: uploaded ? draft.resumeFileName : "" })} />}

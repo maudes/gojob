@@ -23,14 +23,14 @@ export function ScoutTab() {
   return (
     <div className="plain">
       {!state.profile.savedAt && <p className="note">{t("Save your profile first. The search is based on it.")}</p>}
-      <div className="pills" role="tablist">
+      <div className="pills" role="tablist" style={{ justifySelf: "start" }}>
         <button role="tab" aria-selected={view === "scan"} onClick={() => setView("scan")}>{t("Headhunter scan")}</button>
         <button role="tab" aria-selected={view === "wish"} onClick={() => setView("wish")}>{t("Wish list")} ({wishlist.length})</button>
         <button role="tab" aria-selected={view === "companies"} onClick={() => setView("companies")}>{t("Target companies")} ({companies.length}){fresh > 0 && <> · {fresh} {t("new")}</>}</button>
       </div>
-      <div hidden={view !== "scan"}><Scan /></div>
-      <div hidden={view !== "wish"}><WishList /></div>
-      <div hidden={view !== "companies"}><Companies /></div>
+      <div className="plain" hidden={view !== "scan"}><Scan /></div>
+      <div className="plain" hidden={view !== "wish"}><WishList /></div>
+      <div className="plain" hidden={view !== "companies"}><Companies /></div>
     </div>
   );
 }
@@ -57,6 +57,7 @@ function Scan() {
   const watched = new Set(scout.companies.map((c) => c.company.trim().toLowerCase()));
 
   const scan = () => post("scout", { kind: "run", settings });
+  const refresh = (part: "jobs" | "companies") => post(`refresh-${part}`, { kind: "refresh", part });
   const saveJob = async (j: ScoutJob) => {
     if (await post("save", { kind: "saveJob", job: { ...j, visa: j.visaNote || t(VISA[j.visa][0]) } })) toast(t("Saved to your wish list."));
   };
@@ -92,7 +93,22 @@ function Scan() {
       </div>
 
       {report && o && (
-        <>
+        <div className="plain">
+          {o.direction?.length > 0 && (
+            <div className="card">
+              <h2>{t("What this search is based on")}</h2>
+              <p className="sub">{t("Read from your saved profile and resume (step 1). Every opening and company below traces back to one of these. Change your profile and scan again to change the direction.")}</p>
+              <p className="sub"><b>{t("Roles")}</b>: {p.roles.join(", ") || "—"} · <b>{t("Domains")}</b>: {p.domains.join(", ") || "—"} · <b>{t("Sponsorship required?")}</b> {t(p.sponsorship ? "Yes" : "No")}</p>
+              {o.direction.map((d, i) => (
+                <div className="it" key={i}>
+                  <h3>{d.theme}</h3>
+                  <p>{d.searchFor}</p>
+                  <p><Quote e={d.proof} failed={report.quoteCheck.failed} /></p>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="card">
             <h2>{t("Market today")}</h2>
             <p><b>{o.headline}</b></p>
@@ -113,9 +129,11 @@ function Scan() {
           </div>
 
           <div className="card">
-            <h2>{t("Openings worth a look")} ({o.jobs.length})</h2>
+            <div className="row"><h2 className="grow">{t("Openings worth a look")} ({o.jobs.length})</h2><Btn small busyKey="refresh-jobs" onClick={() => refresh("jobs")}>↻ {t("Refresh openings")}</Btn></div>
+            <Working busyKey="refresh-jobs" />
             <p className="sub">{t("The app opened every link itself. Nothing here is applied to automatically: save what interests you and decide later.")}{report.dropped > 0 && <> {report.dropped} {t("items were removed because they had no real link.")}</>}</p>
             {o.jobs.length === 0 && <p className="sub">{t("Nothing passed the filters today. That is a valid result; the filters were not relaxed.")}</p>}
+            {(report.refreshes ?? 0) > 0 && <p className="sub">{t("Refresh looks for items not shown before in this scan. Anything you saved stays in your wish list and target companies.")}</p>}
             {o.jobs.map((j) => {
               const link = LINK[report.links[j.url] ?? "unverified"];
               return (
@@ -144,7 +162,8 @@ function Scan() {
           </div>
 
           <div className="card">
-            <h2>{t("Companies worth approaching")} ({o.companies.length})</h2>
+            <div className="row"><h2 className="grow">{t("Companies worth approaching")} ({o.companies.length})</h2><Btn small busyKey="refresh-companies" onClick={() => refresh("companies")}>↻ {t("Refresh companies")}</Btn></div>
+            <Working busyKey="refresh-companies" />
             <p className="sub">{t("No exactly matching opening right now, but a close fit with a recent signal.")}</p>
             {o.companies.map((c) => {
               const tracked = watched.has(c.company.trim().toLowerCase());
@@ -168,7 +187,7 @@ function Scan() {
             <p className="sub">{t("Jobs, companies and market signals come from web search and are outside what the auditors can verify. The auditors check what is said about you.")}</p>
             <AuditBox r={report} />
           </div>
-        </>
+        </div>
       )}
     </>
   );
@@ -200,7 +219,7 @@ function WishList() {
         <div className="tw">
           <table>
             <thead>
-              <tr>{["Company", "Job position", "Location", "Job link", "Fit", "Decision", "Still open?", "Notes", "Saved"].map((h) => <th key={h}>{t(h)}</th>)}<th /></tr>
+              <tr>{["Company", "Job position", "Location", "Job link", "Tier", "Fit", "Decision", "Still open?", "Notes", "Saved"].map((h) => <th key={h}>{t(h)}</th>)}<th /></tr>
             </thead>
             <tbody>
               {rows.map((row) => (
@@ -209,20 +228,21 @@ function WishList() {
                   <td>{cell(row, "title", "Job position")}</td>
                   <td>{cell(row, "location", "Location")}</td>
                   <td>{cell(row, "url", "Job link")}</td>
-                  <td className="sub" style={{ minWidth: 200 }}>{row.tier && <span className="badge">{t("Tier")} {row.tier}</span>} {row.fit}{row.visa && <> · {row.visa}</>}</td>
+                  <td>{row.tier ? <span className="badge">{row.tier}</span> : <span className="sub">—</span>}</td>
+                  <td className="sub clip" title={[row.fit, row.visa].filter(Boolean).join(" · ")}>{[row.fit, row.visa].filter(Boolean).join(" · ") || "—"}</td>
                   <td>
                     <select id={`w-decision-${row.id}`} aria-label={t("Decision")} value={row.decision} onChange={(e) => commit(row.id, { decision: e.target.value as WishJob["decision"] })}>
                       {WISH_DECISIONS.map((s) => <option key={s} value={s}>{t(s)}</option>)}
                     </select>
                   </td>
-                  <td style={{ whiteSpace: "nowrap" }}>
+                  <td>
                     {row.open && <span className={`badge ${row.open === "open" ? "good" : "warn"}`}>{t(row.open === "open" ? "Open" : "Could not confirm")}</span>}{" "}
                     <span className="sub">{day(row.lastChecked)}</span>{" "}
                     <Btn small busyKey={`chk-${row.id}`} disabled={!isLink(row.url)} onClick={() => post(`chk-${row.id}`, { kind: "checkJob", id: row.id })}>{t("Check")}</Btn>
                   </td>
                   <td>{cell(row, "notes", "Notes")}</td>
                   <td className="sub">{day(row.savedAt)}</td>
-                  <td style={{ whiteSpace: "nowrap" }}>
+                  <td>
                     {isLink(row.url) && <a className="btn s" href={row.url} target="_blank" rel="noopener noreferrer">{t("Open link")}</a>}{" "}
                     <button type="button" className="btn s" disabled={!isLink(row.url)} onClick={() => openJD(row.url)}>{t("Analyse")}</button>{" "}
                     <button type="button" className="btn s" aria-label={t("Delete row")} onClick={() => remove(row.id)}>✕</button>
@@ -254,9 +274,10 @@ function Companies() {
     <input type="text" id={`c-${field}-${row.id}`} aria-label={t(label)} value={row[field]} onChange={(e) => edit(row.id, { [field]: e.target.value })} onBlur={(e) => commit(row.id, { [field]: e.target.value })} />
   );
   const detail = rows.find((r) => r.id === open) ?? null;
-  const act = async (id: string, kind: "checkCompany" | "people") => {
+  // One button: look for openings, then look for people, and show both in the panel below.
+  const research = async (id: string) => {
     setOpen(id);
-    await post(`${kind}-${id}`, { kind, id });
+    if (await post(`research-${id}`, { kind: "checkCompany", id })) await post(`research-${id}`, { kind: "people", id });
   };
 
   return (
@@ -288,13 +309,12 @@ function Companies() {
                       </td>
                       <td>{cell(row, "contact", "Contact and outreach")}</td>
                       <td>{cell(row, "notes", "Notes")}</td>
-                      <td style={{ whiteSpace: "nowrap" }}>
+                      <td>
                         <button type="button" className="btn s" onClick={() => setOpen(open === row.id ? null : row.id)}>{row.openings.length}{fresh > 0 && <> · {fresh} {t("new")}</>}</button>
                       </td>
                       <td className="sub">{day(row.lastChecked) || t("Never")}</td>
-                      <td style={{ whiteSpace: "nowrap" }}>
-                        <Btn small busyKey={`checkCompany-${row.id}`} disabled={!row.company.trim()} onClick={() => act(row.id, "checkCompany")}>{t("Check openings")}</Btn>{" "}
-                        <Btn small busyKey={`people-${row.id}`} disabled={!row.company.trim()} onClick={() => act(row.id, "people")}>{t("Find people")}</Btn>{" "}
+                      <td>
+                        <Btn small busyKey={`research-${row.id}`} disabled={!row.company.trim()} onClick={() => research(row.id)}>{t(row.lastChecked ? "Refresh" : "Research")}</Btn>{" "}
                         <button type="button" className="btn s" aria-label={t("Delete row")} onClick={() => remove(row.id)}>✕</button>
                       </td>
                     </tr>
@@ -309,10 +329,9 @@ function Companies() {
       {detail && (
         <div className="card">
           <div className="row"><h2 className="grow">{detail.company || t("Untitled")}</h2><button type="button" className="btn s" onClick={() => setOpen(null)}>{t("Close")}</button></div>
-          <Working busyKey={`checkCompany-${detail.id}`} />
-          <Working busyKey={`people-${detail.id}`} />
+          <Working busyKey={`research-${detail.id}`} />
           <h3>{t("Openings")} {detail.lastChecked && <small className="sub">· {t("Last checked")} {day(detail.lastChecked)}</small>}</h3>
-          {!detail.lastChecked && <p className="sub">{t("Not checked yet. Check openings searches this company's careers page for roles that fit your profile.")}</p>}
+          {!detail.lastChecked && <p className="sub">{t("Not researched yet. Research searches this company's careers page for roles that fit your profile and finds people to reach.")}</p>}
           {detail.lastChecked && detail.openings.length === 0 && <p className="sub">{t("No fitting opening found at the last check.")}</p>}
           {detail.openings.map((x) => (
             <div className="it" key={x.url}>

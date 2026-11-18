@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
 FILES_DIR = DATA_DIR / "files"
 DB_FILE = DATA_DIR / "db.json"
-PROMPTS_DIR = Path(__file__).resolve().parent / "prompt_templates"
+SKILLS_DIR = Path(__file__).resolve().parent / "skills"
 
 # Same file the Next.js app used, so an existing setup keeps working.
 load_dotenv(ROOT / ".env.local")

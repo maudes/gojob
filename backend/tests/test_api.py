@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import io
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from gojob import config
+from gojob import config, files
 from gojob.docx_io import docx_to_text, text_to_docx
 from gojob.main import app
 from tests.conftest import RESUME
@@ -163,6 +164,47 @@ def test_upload_docx_becomes_pending_then_master_on_save(client, profile_body):
     assert (config.FILES_DIR / "master.docx").exists()
 
 
+class _Reply:
+    def __init__(self, content: bytes, status_code: int = 200):
+        self.content, self.status_code = content, status_code
+
+
+DOC_LINK = "https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdEFG/edit"
+
+
+def test_google_doc_link_is_fetched_as_word_and_keeps_the_layout(client, resume, monkeypatch):
+    asked = []
+
+    def fake_get(url, **_kw):
+        asked.append(url)
+        return _Reply(text_to_docx(resume + "\nPersonal: alex@example.com"))
+
+    monkeypatch.setattr("gojob.main.httpx.get", fake_get)
+    got = client.post("/api/resume-link", json={"link": DOC_LINK})
+    assert got.status_code == 200
+    body = got.json()
+    assert asked == ["https://docs.google.com/document/d/1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdEFG/export?format=docx"]
+    assert body["format"] == "docx" and "Matter integration" in body["text"] and "alex@example.com" not in body["text"]
+    assert files.has_source("pending")  # the Word file is kept, so a revised resume is edited in place
+
+
+def test_a_link_that_is_not_shared_gets_a_clear_message(client, monkeypatch):
+    monkeypatch.setattr("gojob.main.httpx.get", lambda *_a, **_k: _Reply(b"<html><title>Sign in</title></html>", 200))
+    res = client.post("/api/resume-link", json={"link": DOC_LINK})
+    assert res.status_code == 422 and "Anyone with the link" in res.json()["error"]
+
+
+def test_resume_link_refuses_other_sites_and_survives_network_errors(client, monkeypatch):
+    assert client.post("/api/resume-link", json={"link": "https://example.com/cv.docx"}).status_code == 400
+    assert client.post("/api/resume-link", json={"link": ""}).status_code == 400
+
+    def down(*_a, **_k):
+        raise httpx.ConnectError("offline")
+
+    monkeypatch.setattr("gojob.main.httpx.get", down)
+    assert client.post("/api/resume-link", json={"link": DOC_LINK}).status_code == 502
+
+
 def test_upload_rejects_big_empty_and_unreadable_files(client):
     assert client.post("/api/upload", files={"file": ("a.txt", b"x" * (8 * 1024 * 1024 + 1))}).status_code == 400
     assert client.post("/api/upload", files={"file": ("a.txt", b"too little")}).status_code == 422
@@ -198,6 +240,15 @@ def test_scout_scan_wishlist_and_companies(client, saved):
     scan = client.post("/api/scout", json={"kind": "run", "lang": "en", "settings": {"regions": ["Ireland", "UK"], "languages": ["English"], "notes": ""}}).json()["scout"]
     assert scan["report"]["demo"] and len(scan["report"]["output"]["regions"]) == 2 and scan["report"]["meta"]["appVersion"]
     assert scan["history"] == []  # sample scans are not kept as market history
+
+    assert scan["report"]["output"]["direction"][0]["proof"]["source"] == "resume"  # the search direction is read from the resume
+    before = {j["url"] for j in scan["report"]["output"]["jobs"]}
+    fresh = client.post("/api/scout", json={"kind": "refresh", "lang": "en", "part": "jobs"}).json()["scout"]["report"]
+    assert fresh["output"]["jobs"] and not before & {j["url"] for j in fresh["output"]["jobs"]} and before <= set(fresh["shown"]["jobs"])
+    assert fresh["output"]["companies"] == scan["report"]["output"]["companies"]  # the other part is untouched
+    again_c = client.post("/api/scout", json={"kind": "refresh", "lang": "en", "part": "companies"}).json()["scout"]["report"]
+    assert again_c["output"]["companies"][0]["company"] != scan["report"]["output"]["companies"][0]["company"]
+    assert client.post("/api/scout", json={"kind": "refresh", "lang": "en", "part": "markets"}).status_code == 400
 
     job = scan["report"]["output"]["jobs"][0]
     saved_job = client.post("/api/scout", json={"kind": "saveJob", "job": job}).json()["scout"]["wishlist"]

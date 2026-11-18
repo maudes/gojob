@@ -18,6 +18,7 @@ Runs on your own computer. Your data stays in the `data/` folder.
 
 - **A clear apply decision.** Average 80 or more with no reviewer below 70: apply. 60 to 79: tune first. Below 60: skip. Work-visa wording in the posting is part of the verdict.
 - **Honest by design.** Rewrites cannot add numbers, tools or titles. Code checks that every quote appears word for word in your resume or the JD, and five auditors review each answer.
+- **Your resume keeps its layout.** Keep it in Google Docs and fetch it by link: the app edits the Word copy in place, never touches the name, section titles, employers, titles or dates, and every suggested change has a Copy button to paste back into your doc.
 - **It knows when to stop.** Tuning only rewords what your resume already shows. When that no longer helps, the job stops at "Ceiling reached" instead of gaming the score.
 - **Local first.** One JSON file, no account, no background jobs.
 
@@ -38,7 +39,7 @@ The screens only draw. A Python backend does all the AI work, and every answer p
 | **Fixed pipeline, not an LLM orchestrator** | Every button already says what to do, so code routes it: no extra model call, same path every time, easy to test. Only web search lets the model choose. |
 | **Strong writer, cheap auditors** | Opus writes and scores; five Haiku auditors check the result in parallel. |
 | **Proof over polish** | Quote checks are code, so they are exact and repeatable. |
-| **Measured, not assumed** | `npm run eval` runs synthetic cases built to provoke mistakes, so changes can be compared before release. |
+| **Measured, not assumed** | `npm run eval` runs synthetic cases built to provoke mistakes. `npm run eval:audit` plants mistakes on purpose to see how many the five auditors catch. Changes can be compared before release. |
 
 ## Make it yours
 
@@ -46,16 +47,16 @@ Prompts, gates and evals are plain files in the repo, so you can tune GoJob to y
 
 | What | Where |
 |---|---|
-| **Prompts**: every AI role, including how the resume is reworded with the JD's keywords | `backend/gojob/prompts.py`, `backend/gojob/prompt_templates/one-pager.md` |
+| **Prompts**: every AI role, including how the resume is reworded with the JD's keywords | `backend/gojob/skills/` (one file per prompt, [index](backend/gojob/skills/README.md)) |
 | **Gates**: the apply rule, the tuning ceiling, the audit pass mark | `backend/gojob/pipeline.py` |
-| **Evals**: traps, rubrics, your own scores | `evals/cases/`, `evals/rubrics/`, `evals/labels/` |
+| **Evals**: traps, rubrics, your own scores, planted mistakes for the auditors | `evals/cases/`, `evals/rubrics/`, `evals/labels/`, `evals/audit/` |
 
 1. Create a branch and change a prompt or a gate.
 2. Run `npm test`, then `npm run eval -- --yes`.
-3. Run `npm run eval -- --compare OLD.json NEW.json`. Any regression is flagged.
+3. Run `npm run eval -- --compare OLD.json NEW.json`. Any regression is flagged, and the skills that changed are named. After editing the auditor prompt, also run `npm run eval:audit -- --yes`.
 4. Keep the change only if the checks hold, then note it in the changelog and tag a release.
 
-Every saved result carries the app version and a fingerprint of all prompts, so you can always tell which version of your prompts produced it. When a real answer goes wrong, add it as a new eval case.
+Every saved result carries the app version, a fingerprint of all prompts and one per skill, so you can always tell which prompt produced it. When a real answer goes wrong, add it as a new eval case.
 
 ## Quick start
 
@@ -70,6 +71,6 @@ Without a key the app opens in sample mode, and every result says so.
 
 GoJob grew out of **JobLens**, a FastAPI tool that used an LLM to streamline the job search. Networking, resume fine-tuning and interview prep then moved into several Claude Schedules and Projects; GoJob brings them into one page, borrowing ideas from career-ops and adjusting them to one person's own search.
 
-Version 1.0.0 plus unreleased changes. The evaluation set is built but not yet run against real model output.
+Version 1.0.0 plus unreleased changes. The evaluation sets (answers and auditors) are built but not yet run against real model output.
 
 More: [Guide](docs/guide.md) · [Architecture](docs/architecture.md) · [Evals](evals/README.md) · [Changelog](CHANGELOG.md)

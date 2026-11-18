@@ -18,7 +18,7 @@ from docx.shared import Pt
 
 _PARA = re.compile(r"<w:p[ >].*?</w:p>", re.S)
 # Text runs and tabs, in document order.
-_PIECE = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>|<w:tab/>|<w:br/>")
+_PIECE = re.compile(r"<w:t(?:\s[^>]*)?>([^<]*)</w:t>|<w:tab/>|<w:br(?:\s[^>]*)?/>")
 
 
 def _unescape(s: str) -> str:

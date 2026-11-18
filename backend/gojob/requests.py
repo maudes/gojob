@@ -39,6 +39,10 @@ class RunBody(Req):
     target: str | None = None
 
 
+class ResumeLinkBody(Req):
+    link: str | None = None
+
+
 class JDFetchBody(Req):
     url: str | None = None
 
@@ -105,6 +109,7 @@ class ScoutBody(Req):
     kind: str | None = None
     lang: Lang | None = None
     id: str | None = None
+    part: Literal["jobs", "companies"] | None = None
     settings: ScoutSettingsBody | None = None
     job: ScoutJobBody | None = None
     company: ScoutCompanyBody | None = None

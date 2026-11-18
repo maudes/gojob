@@ -90,7 +90,7 @@ def test_results_carry_the_stamp_run_count_and_time(monkeypatch):
     monkeypatch.setattr(pl, "run_json", lambda **kw: audit(98) if kw["schema"] is Audit else _health())
     result = pl.reviewed(schema=HealthCheck, role="role", context="c", sources={"resume": "", "jd": ""}, lang="en", runs=3)
     assert result["runs"] == 3 and result["generatedAt"].endswith("Z")
-    assert set(result["meta"]) == {"appVersion", "promptHash", "models"}
+    assert set(result["meta"]) == {"appVersion", "promptHash", "skills", "models"}
 
 
 def _health() -> HealthCheck:

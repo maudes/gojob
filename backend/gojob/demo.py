@@ -5,6 +5,8 @@ user's own resume lines so accepting and exporting them really works.
 """
 from __future__ import annotations
 
+from .text import editable_lines
+
 NONE = {"source": "none", "quote": ""}
 
 
@@ -27,9 +29,9 @@ def panel(scores: list[float]) -> list[dict]:
 
 
 def _sample_changes(resume: str) -> list[dict]:
-    """Two sample tracked changes on real lines of the resume."""
-    lines = [ln.strip() for ln in resume.split("\n")]
-    lines = [ln for ln in lines if len(ln.split()) >= 6 and len(ln) < 220]
+    """Two sample tracked changes on real sentence or bullet lines of the resume, never on the
+    name, contact, section title, employer, job title, date or school lines."""
+    lines = [ln for ln in editable_lines(resume) if len(ln.split()) >= 10 and len(ln) < 220 and "[" not in ln]
     out: list[dict] = []
     if len(lines) > 0:
         words = lines[0].split(" ")

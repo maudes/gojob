@@ -12,7 +12,7 @@ from .meta import stamp
 from .pipeline import check_quotes, gate, is_approved
 from .scout import keep_linked
 from .store import migrate
-from .text import apply_to_text, is_verbatim, redact
+from .text import apply_to_text, is_verbatim, keep_editable, redact
 
 
 def _audit(score: float, ok: bool = True) -> dict:
@@ -60,6 +60,9 @@ def _run() -> list[dict]:
         t("Word file is edited in place", False)
     kept, dropped = keep_linked([{"url": "https://jobs.example.com/1"}, {"url": ""}, {"url": "see careers page"}, {"url": "http://localhost/x"}])
     t("Scan drops jobs without a real link", len(kept) == 1 and dropped == 3)
+    layout = "Jane Doe\nSUMMARY\nAcme Corp Berlin, Germany\nProduct Manager Jan 2021 – Present\nOwned the connectivity roadmap across three hardware product lines for EU launches."
+    kept, dropped = keep_editable([{"find": "Acme Corp Berlin, Germany", "replace": "x"}, {"find": "Product Manager Jan 2021", "replace": "x"}, {"find": "Owned the connectivity roadmap", "replace": "y"}], layout)
+    t("Changes never touch name, section, employer, title or date lines", dropped == 2 and [c["replace"] for c in kept] == ["y"])
     s = stamp()
     t("Results are stamped with version, prompts and models", bool(s["appVersion"]) and len(s["promptHash"]) == 10 and s["models"]["main"] and s["models"]["reviewer"])
     migrated = migrate({"profile": {}})
