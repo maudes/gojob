@@ -49,7 +49,7 @@ Prompts, gates and evals are plain files in the repo, so you can tune GoJob to y
 | What | Where |
 |---|---|
 | **Prompts**: every AI role, including how the resume is reworded with the JD's keywords | `backend/gojob/skills/` (one file per prompt, [index](backend/gojob/skills/README.md)) |
-| **Gates**: the health-check and apply thresholds, the tuning ceiling | `backend/gojob/scoring.py` (every score threshold is in this one file) |
+| **Gates**: the health-check and apply thresholds, the tuning ceiling | `backend/gojob/scoring.py` (every gate in one file; the auditors' pass mark is the next row) |
 | **Audit pass mark**: how high the five auditors must score | `backend/gojob/audit.py` (`AUDIT_PASS_ABOVE`) |
 | **Evals**: traps, rubrics, your own scores, planted mistakes for the auditors | `evals/cases/`, `evals/rubrics/`, `evals/labels/`, `evals/audit/` |
 

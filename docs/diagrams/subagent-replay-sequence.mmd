@@ -1,0 +1,20 @@
+sequenceDiagram
+  participant S as Claude Code
+  participant C as gojob.cli
+  participant F as data/manual/NAME
+  participant A as Subagents
+  loop Until the status is done
+    S->>C: Run analyze-jd --runner subagent
+    C->>F: Reuse answers, write new requests
+    alt Some calls have no answer yet
+      C-->>S: pending, with the request files
+      par One subagent per request
+        S->>A: Answer this request file
+        A->>F: Write the answer file
+      end
+    else Every call has a valid answer
+      C->>C: Audit, check, gate (as in the app)
+      C-->>S: done, with the result file
+    end
+  end
+  Note over C,F: A bad answer is asked again, up to 3 times

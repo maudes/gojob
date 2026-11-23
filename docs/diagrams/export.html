@@ -1,0 +1,44 @@
+<!doctype html><meta charset="utf-8"><title>Export GoJob diagrams</title>
+<body style="font-family: sans-serif; margin: 16px"><pre id="log">starting…
+</pre>
+<script type="module">
+import mermaid from 'https://esm.sh/mermaid@11/dist/mermaid.esm.min.mjs';
+const log = (m) => (document.getElementById('log').textContent += m + '\n');
+// The ELK layout comes from a second CDN if the first one is down.
+async function loadElk() {
+  for (const url of ['https://esm.sh/@mermaid-js/layout-elk@0', 'https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0/dist/mermaid-layout-elk.esm.min.mjs']) {
+    try { return (await import(url)).default; } catch (e) { log('could not load ' + url); }
+  }
+  throw new Error('could not load the ELK layout from any CDN');
+}
+mermaid.registerLayoutLoaders(await loadElk());
+const theme = {
+  fontSize: '14px', fontFamily: 'Helvetica, Arial, sans-serif', lineColor: '#73726c', textColor: '#3d3d3a',
+  primaryColor: '#EEEDFE', primaryTextColor: '#3C3489', primaryBorderColor: '#534AB7', labelBackgroundColor: '#ffffff',
+  actorBkg: '#EEEDFE', actorTextColor: '#3C3489', actorBorder: '#534AB7', signalColor: '#73726c', signalTextColor: '#3d3d3a',
+  noteBkgColor: '#FAEEDA', noteTextColor: '#633806', noteBorderColor: '#854F0B',
+  labelBoxBkgColor: '#F1EFE8', labelTextColor: '#444441', loopTextColor: '#3d3d3a',
+};
+async function build(file) {
+  const src = await (await fetch('/src/' + file, { cache: 'no-store' })).text();
+  const layout = /^\s*stateDiagram/m.test(src) ? 'elk' : 'dagre'; // ELK keeps the state diagram's lines apart
+  mermaid.initialize({ startOnLoad: false, theme: 'base', layout, htmlLabels: false, themeVariables: theme });
+  const { svg } = await mermaid.render('g' + Math.random().toString(36).slice(2), src);
+  const host = document.createElement('div');
+  host.innerHTML = svg;
+  const el = host.querySelector('svg');
+  el.setAttribute('xmlns', 'http://www.w3.org/2000/svg'); // strict XML, so it also shows as an <img>
+  el.style.backgroundColor = '#ffffff';
+  const [, , w, h] = el.getAttribute('viewBox').split(/\s+/).map(Number);
+  el.setAttribute('width', Math.ceil(w));
+  el.setAttribute('height', Math.ceil(h));
+  const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(el);
+  const out = file.replace(/\.mmd$/, '.svg');
+  const res = await fetch('/save/' + out, { method: 'POST', body: xml });
+  log(`${out}: ${res.ok ? 'saved' : 'FAILED ' + res.status} (${xml.length} bytes)`);
+}
+try {
+  for (const f of await (await fetch('/list')).json()) await build(f);
+  log('done');
+} catch (e) { log('ERROR ' + (e && e.message || e)); }
+</script>
