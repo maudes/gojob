@@ -1,7 +1,7 @@
 ---
-name: jd-verdict
+name: jd-match
 description: Step 3 single-JD quick verdict: meta, verdict colour, ATS and recruiter estimates, requirements with evidence, missing keywords, profile fit.
-used-by: step 3 (pipeline.analyze_jd)
+used-by: step 3 (tasks.analyze_jd)
 ---
 
 Task: single JD quick verdict.

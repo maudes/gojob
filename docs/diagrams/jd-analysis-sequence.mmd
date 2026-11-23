@@ -1,25 +1,26 @@
 sequenceDiagram
   participant U as User
-  participant B as Backend (FastAPI + pipeline)
+  participant B as Backend
   participant W as Writer (Opus)
-  participant PN as Review panel x3 (Opus)
+  participant PN as Panel x3 (Opus)
   participant AU as Auditors x5 (Haiku)
   participant DB as db.json
   U->>B: Paste a JD
   B->>DB: Read saved profile
   DB-->>B: Profile and resume
-  par In parallel
-    B->>W: Produce JD analysis
-    W-->>B: Match analysis
-  and
+  par Match analysis
+    B->>W: Write the analysis
+    W-->>B: Analysis
+    B->>AU: Audit it, check quotes
+    AU-->>B: Scores and issues
+  and Reviewer scores
     B->>PN: Score the resume
-    PN-->>B: ATS, recruiter, manager scores
+    PN-->>B: Three scores
+    B->>AU: Audit the scores
+    AU-->>B: Scores and issues
   end
-  B->>AU: Audit each output
-  AU-->>B: Five scores and issues
-  B->>B: Quote check, word for word
-  opt Any score not above 95, or a quote not found
-    B->>W: Rewrite once, with the issue list
+  opt A lane fails its audit
+    B->>W: Rewrite once
     W-->>B: Corrected output
     B->>AU: Audit again
     AU-->>B: Final audit result

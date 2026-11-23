@@ -1,4 +1,4 @@
-"""The HTTP interface. Same paths and JSON shapes the Next.js app used, so the browser code is unchanged."""
+"""HTTP routes (/api/*). Same paths and JSON shapes the Next.js app used."""
 from __future__ import annotations
 
 import logging
@@ -13,19 +13,19 @@ from pydantic import ValidationError
 
 from . import coach as coach_mod
 from . import config, files
-from . import pipeline as pl
-from . import prompts as P
-from . import requests as R
+from . import context_blocks as P
+from . import request_checks as R
 from . import scout as scout_mod
-from .claude import AgentError, has_credentials
+from . import scoring, tasks
+from .model_client import AgentError, has_credentials
 from .docx_io import docx_to_pdf, docx_to_text, text_to_docx
 from .extract import drive_download_url, file_to_text, google_resume_url, html_to_text, is_safe_url
 from .jobpage import read_job_page
-from .meta import prompt_hash, stamp
+from .version_stamp import prompt_hash, stamp
 from .schemas import ACTION_KINDS, COMPANY_STATUSES, TRACKER_STATUSES, WISH_DECISIONS, Profile
 from .selftest import self_test
-from .store import EMPTY_COACH, EMPTY_SCOUT, new_id, read_db, update_db
-from .text import apply_to_text, redact
+from .store import EMPTY_COACH, EMPTY_SCOUT, new_id, now_iso, read_db, update_db
+from .text_tools import apply_to_text, redact
 
 log = logging.getLogger("gojob")
 app = FastAPI(title="Go Job", version=config.app_version(), docs_url="/api/docs", openapi_url="/api/openapi.json")
@@ -68,10 +68,6 @@ def lang_of(body: dict) -> P.Lang:
     return "zh" if body.get("lang") == "zh" else "en"
 
 
-def now_iso() -> str:
-    return pl.now_iso()
-
-
 def same_day(a: str | None, b: str) -> bool:
     return bool(a) and a[:10] == b[:10]
 
@@ -96,6 +92,7 @@ def state() -> dict:
         "scout": db["scout"],
         "config": {
             "live": has_credentials(),
+            "thresholds": scoring.thresholds(),
             "mainModel": config.MAIN_MODEL,
             "reviewerModel": config.REVIEWER_MODEL,
             "tests": self_test(),
@@ -110,11 +107,7 @@ def state() -> dict:
 
 def _view(record: dict, profile: dict) -> dict:
     """The record as the screen sees it: the stored fields plus whether tuning has reached its ceiling."""
-    return {**record, "ceiling": pl.fit_ceiling(record, profile["resumeText"])}
-
-
-def _point(g: dict) -> dict:
-    return {"at": now_iso(), "average": g["average"], "scores": g["scores"]}
+    return {**record, "ceiling": scoring.fit_ceiling(record, profile["resumeText"])}
 
 
 @app.post("/api/run")
@@ -132,7 +125,7 @@ def run(req: R.RunBody) -> dict:
             raise fail("Add at least 3 target JDs first.")
         same = (db["health"] or {}).get("profileSavedAt") == profile["savedAt"]
         runs = db["healthRuns"] + 1 if same else 1
-        health = pl.health_check(profile, lang, runs)
+        health = tasks.health_check(profile, lang, runs)
 
         def save_health(d: dict) -> None:
             d["health"] = health
@@ -145,19 +138,7 @@ def run(req: R.RunBody) -> dict:
         jd_text = str(body.get("jdText") or "").strip()
         if len(jd_text) < 300:
             raise fail("The job description is too short to analyse.")
-        result = pl.analyze_jd(profile, profile["resumeText"], jd_text, lang, 1)
-        record = {
-            "id": new_id(),
-            "jdUrl": body.get("jdUrl") or "",
-            "jdText": jd_text,
-            "createdAt": now_iso(),
-            "tailoredText": None,
-            "assessedText": profile["resumeText"],
-            "history": [_point(result["gate"])],
-            "networkTarget": "",
-            **result,
-            "actions": {},
-        }
+        record = tasks.new_record(profile, jd_text, body.get("jdUrl") or "", lang)
         update_db(lambda d: d["analyses"].insert(0, record))
         return {"record": record}
 
@@ -183,15 +164,15 @@ def run(req: R.RunBody) -> dict:
         # A changed resume is a new assessment (never limited). The same resume is a retry (counted).
         changed = resume != existing["assessedText"]
         runs = 1 if changed else existing["analysis"]["runs"] + 1
-        result = pl.analyze_jd(profile, resume, existing["jdText"], lang, runs, changed or len(existing["history"]) > 1)
+        result = tasks.analyze_jd(profile, resume, existing["jdText"], lang, runs, changed or len(existing["history"]) > 1)
 
         def apply_reanalysis(r: dict) -> None:
             r.update(result)
             r["assessedText"] = resume
             if changed:
-                r["history"].append(_point(result["gate"]))
+                r["history"].append(tasks.history_point(result["gate"]))
             else:
-                r["history"][-1] = _point(result["gate"])
+                r["history"][-1] = tasks.history_point(result["gate"])
 
         return {"record": _view(save(apply_reanalysis), profile), "changed": changed}
 
@@ -200,11 +181,11 @@ def run(req: R.RunBody) -> dict:
 
     action = body.get("action")
     if kind == "action" and action in ACTION_KINDS:
-        if action == "fineTune" and pl.fit_ceiling(existing, profile["resumeText"]):
-            raise fail(pl.CEILING_MESSAGE, 409)
-        output = pl.run_action(action, profile, existing, lang, str(body.get("input") or ""))
+        if action == "fineTune" and scoring.fit_ceiling(existing, profile["resumeText"]):
+            raise fail(scoring.CEILING_MESSAGE, 409)
+        output = tasks.run_action(action, profile, existing, lang, str(body.get("input") or ""))
         if action == "fineTune":
-            pl.mark_fine_tune(output, existing["tailoredText"] or profile["resumeText"])
+            scoring.mark_fine_tune(output, existing["tailoredText"] or profile["resumeText"])
         return {"record": _view(save(lambda r: r["actions"].__setitem__(action, output)), profile)}
     raise fail("Unknown request.")
 
@@ -592,7 +573,7 @@ def scout(req: R.ScoutBody) -> dict:
 
             return {"scout": update_db(save_openings)}
         where = {"company": company["company"], "title": company["roleType"] or " / ".join(profile["roles"]), "location": ", ".join(profile["regions"])}
-        people = pl.find_people(P.profile_block(profile), where, lang, ((company.get("people") or {}).get("runs") or 0) + 1)
+        people = tasks.find_people(P.profile_block(profile), where, lang, ((company.get("people") or {}).get("runs") or 0) + 1)
 
         def save_people(d: dict) -> dict:
             row = next((c for c in d["scout"]["companies"] if c["id"] == body.get("id")), None)

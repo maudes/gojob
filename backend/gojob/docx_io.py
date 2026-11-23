@@ -1,7 +1,4 @@
-"""Edit a .docx in place so the revised resume keeps the fonts and layout of the file the user uploaded.
-
-Only the text inside existing runs is touched, so this works on the raw XML rather than rebuilding the file.
-"""
+"""Edit a .docx in place, so the revised resume keeps the uploaded file's fonts and layout."""
 from __future__ import annotations
 
 import io

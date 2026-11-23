@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from gojob import prompts as P
-from gojob import skills as S
+from gojob import context_blocks as P
+from gojob import skill_loader as S
 from gojob.config import SKILLS_DIR
 
 PLACEHOLDER = re.compile(r"\{\{(\w+)\}\}")
@@ -63,7 +63,7 @@ def test_names_used_in_the_code_exist():
     used: set[str] = set()
     for src in Path(S.__file__).parent.glob("*.py"):
         used |= set(re.findall(r"""skill\(\s*["']([a-z0-9_#-]+)["']\s*[,)]""", src.read_text("utf8")))
-    assert {"health-check", "jd-verdict", "networking", "scout", "company-watch", "one-pager#template", "coach-feedback", "coach-report"} <= used
+    assert {"health-check", "jd-match", "networking", "scout", "company-watch", "one-pager#template", "coach-feedback", "coach-report"} <= used
     for ref in used:
         S.raw(ref)
 
@@ -88,7 +88,7 @@ def test_there_are_exactly_five_auditors():
     assert len(P.AUDIT_FOCUS) == 5
     for focus in P.AUDIT_FOCUS:
         assert P.audit_role(focus).startswith("You are a strict fact checker")
-    assert [p for p in S.parts("audit") if p.startswith("focus-")] == list(P.AUDIT_FOCUS)
+    assert [p for p in S.parts("auditor") if p.startswith("focus-")] == list(P.AUDIT_FOCUS)
 
 
 @pytest.fixture

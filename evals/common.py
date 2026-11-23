@@ -17,6 +17,6 @@ def print_skill_changes(a_meta: dict, b_meta: dict) -> None:
     elif changed:
         print("skills changed:", ", ".join(changed))
     elif a_meta.get("promptHash") != b_meta.get("promptHash"):
-        print("skills changed: none (only backend/gojob/prompts.py changed: the data blocks around the prompts)")
+        print("skills changed: none (only backend/gojob/context_blocks.py changed: the data blocks around the prompts)")
     else:
         print("skills changed: none")

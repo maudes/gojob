@@ -1,9 +1,5 @@
-"""Read a job posting from its link. Ported from the first-generation job-hunt-ai reader.
-
-Order: 1. the job board's own public API (cleanest), 2. the page itself,
-3. Jina Reader, a third-party service that renders JavaScript pages.
-Step 3 sends the job link (nothing else) to r.jina.ai; set JD_READER_FALLBACK=off to skip it.
-"""
+"""Read a job posting from its link: the board's own API, then the page, then Jina Reader.
+JD_READER_FALLBACK=off skips Jina."""
 from __future__ import annotations
 
 import os

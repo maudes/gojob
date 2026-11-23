@@ -1,18 +1,17 @@
-"""Free, deterministic checks run on every start. No model calls.
-
-The footer of the app shows how many pass. The fuller pytest suite in backend/tests runs the same
-checks and more; `uv run pytest` is the one to use while developing.
-"""
+"""Free, deterministic checks run on every start (the footer shows how many pass). No model calls."""
 from __future__ import annotations
 
 from functools import lru_cache
 
 from .docx_io import apply_changes_to_docx, docx_to_text, text_to_docx
-from .meta import stamp
-from .pipeline import check_quotes, gate, is_approved
+from .version_stamp import stamp
+from .audit import check_quotes, is_approved
+from .scoring import HEALTH_NEED_AVERAGE as NEED_AVG
+from .scoring import HEALTH_NEED_MIN as NEED_MIN
+from .scoring import gate
 from .scout import keep_linked
 from .store import migrate
-from .text import apply_to_text, is_verbatim, keep_editable, redact
+from .text_tools import apply_to_text, is_verbatim, keep_editable, redact
 
 
 def _audit(score: float, ok: bool = True) -> dict:
@@ -38,7 +37,12 @@ def _run() -> list[dict]:
     t("Quote check rejects altered text", not is_verbatim("Led Matter integrations", "Led Matter integration across teams"))
     qc = check_quotes({"a": {"source": "resume", "quote": "not there"}, "c": [{"find": "Owned roadmap", "replace": "x"}]}, {"resume": "Owned roadmap", "jd": ""})
     t("Unverified quotes are counted", qc["total"] == 2 and len(qc["failed"]) == 1)
-    t("Health gate: average 80, minimum 70", gate([80, 80, 80], 80, 70)["green"] and not gate([95, 95, 69], 80, 70)["green"] and not gate([79, 80, 80], 80, 70)["green"])
+    t(
+        f"Health gate: average {NEED_AVG}, minimum {NEED_MIN}",
+        gate([NEED_AVG] * 3, NEED_AVG, NEED_MIN)["green"]
+        and not gate([100, 100, NEED_MIN - 1], NEED_AVG, NEED_MIN)["green"]
+        and not gate([NEED_AVG - 1, NEED_AVG, NEED_AVG], NEED_AVG, NEED_MIN)["green"],
+    )
     five = lambda scores, ok_index=None: [_audit(s, i != ok_index) for i, s in enumerate(scores)]  # noqa: E731
     t(
         "Approval needs five auditors above 95",

@@ -1,7 +1,7 @@
 ---
 name: shared-rules
 description: Rules several skills share, kept in one place and pasted in with {{include:shared-rules#part}}: ground rules for every writer, resume change rules, visa signals, search honesty rules, and the interface language rules.
-used-by: every writer agent; health-check, fine-tune, jd-verdict, score-panel, scout, company-watch
+used-by: every writer agent; health-check, fine-tune, jd-match, panel-scorer, scout, company-watch
 ---
 
 

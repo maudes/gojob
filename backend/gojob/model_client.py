@@ -1,4 +1,4 @@
-"""The only module that talks to the Claude API."""
+"""The only module that calls the Claude API."""
 from __future__ import annotations
 
 from typing import Literal, TypeVar
@@ -6,7 +6,8 @@ from typing import Literal, TypeVar
 import anthropic
 from pydantic import BaseModel
 
-from .config import MAIN_MODEL, has_credentials
+from . import subagent_runner
+from .config import MAIN_MODEL, has_credentials, runner
 
 __all__ = ["AgentError", "has_credentials", "run_json", "run_with_search"]
 
@@ -45,6 +46,8 @@ def _explain(err: Exception) -> AgentError:
 def run_json(*, schema: type[T], model: str, system: str, user: str, effort: Effort) -> T:
     """One structured call. Current Claude models reject a `temperature` parameter, so
     determinism for reviewers comes from low effort plus a strict schema instead."""
+    if runner() == "subagent":
+        return subagent_runner.run_json(schema=schema, model=model, system=system, user=user, effort=effort)
     try:
         response = _get_client().messages.parse(
             model=model,
@@ -67,6 +70,8 @@ def run_json(*, schema: type[T], model: str, system: str, user: str, effort: Eff
 
 def run_with_search(*, system: str, user: str, max_searches: int, max_tokens: int) -> str:
     """A long free-text call that may search the web. Returns the concatenated text."""
+    if runner() == "subagent":
+        return subagent_runner.run_text(system=system, user=user, max_searches=max_searches)
     try:
         messages: list[dict] = [{"role": "user", "content": user}]
         for _ in range(6):

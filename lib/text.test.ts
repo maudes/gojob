@@ -4,7 +4,7 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { applyToText, diffOps, tier, trackerTSV, TRACKER_COLUMNS, type DiffOp } from "./text.ts";
+import { applyToText, diffOps, fill, tier, trackerTSV, TRACKER_COLUMNS, type DiffOp } from "./text.ts";
 
 const shown = (ops: DiffOp[], hide: DiffOp["type"]) => ops.filter((o) => o.type !== hide).map((o) => o.text).join("");
 
@@ -45,12 +45,27 @@ test("tracked changes: neighbouring pieces of the same kind are merged", () => {
   for (let i = 1; i < ops.length; i++) assert.notEqual(ops[i].type, ops[i - 1].type);
 });
 
+const RULE = { average: 80, min: 70, tuneFrom: 60 };
+
 test("JD tiers: average 80 with minimum 70 is apply, average 60 is tune, below is risky", () => {
-  assert.equal(tier(80, 70), "apply");
-  assert.equal(tier(79.9, 75), "tune");
-  assert.equal(tier(85, 69), "tune");
-  assert.equal(tier(60, 40), "tune");
-  assert.equal(tier(59.9, 50), "risky");
+  assert.equal(tier(80, 70, RULE), "apply");
+  assert.equal(tier(79.9, 75, RULE), "tune");
+  assert.equal(tier(85, 69, RULE), "tune");
+  assert.equal(tier(60, 40, RULE), "tune");
+  assert.equal(tier(59.9, 50, RULE), "risky");
+});
+
+test("JD tiers follow the numbers they are given, not fixed ones", () => {
+  const strict = { average: 90, min: 80, tuneFrom: 70 };
+  assert.equal(tier(85, 85, strict), "tune");
+  assert.equal(tier(69.9, 85, strict), "risky");
+  assert.equal(tier(90, 80, strict), "apply");
+});
+
+test("fill puts values into {placeholders} and leaves unknown ones visible", () => {
+  assert.equal(fill("average ≥ {average}, min {min}", { average: 80, min: 70 }), "average ≥ 80, min 70");
+  assert.equal(fill("below {tuneFrom} and {tuneFrom}", { tuneFrom: 60 }), "below 60 and 60");
+  assert.equal(fill("keeps {other}", { average: 1 }), "keeps {other}");
 });
 
 test("tracker row: columns come out in sheet order, tab separated", () => {

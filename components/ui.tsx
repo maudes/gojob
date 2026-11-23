@@ -1,13 +1,14 @@
 "use client";
 
 import { createContext, useContext, useState, type ReactNode } from "react";
-import type { AnalysisRecord, Audit, AuditResult, CoachData, Evidence, Gate, HealthRecord, Label, PanelScore, Profile, QuoteCheck, ScoutData, TrackerRow } from "@/lib/schemas";
+import type { AnalysisRecord, Audit, AuditResult, CoachData, Evidence, Gate, HealthRecord, Label, PanelScore, Profile, QuoteCheck, ScoutData, Thresholds, TrackerRow } from "@/lib/schemas";
+import { fill } from "@/lib/text";
 import { ZH } from "./zh";
 
 /* ---------- App state shared by the three screens ---------- */
 
 export type Lang = "en" | "zh";
-export type Config = { live: boolean; mainModel: string; reviewerModel: string; tests: { name: string; pass: boolean }[]; appVersion?: string; promptHash?: string };
+export type Config = { live: boolean; thresholds: Thresholds; mainModel: string; reviewerModel: string; tests: { name: string; pass: boolean }[]; appVersion?: string; promptHash?: string };
 export type AppState = { profile: Profile; health: HealthRecord | null; analyses: AnalysisRecord[]; tracker: TrackerRow[]; coach: CoachData; scout: ScoutData; config: Config };
 
 export type App = {
@@ -197,7 +198,7 @@ export function HealthGate({ gate }: { gate: Gate }) {
           {t(gate.green ? "Green light" : "Not green yet")}
         </div>
         <div className="sub">
-          {t("Green needs average ≥ 80 and no reviewer below 70.")} avg {gate.average.toFixed(1)} · min {gate.min}
+          {fill(t("Green needs average ≥ {average} and no reviewer below {min}."), { average: gate.needAverage, min: gate.needMin })} avg {gate.average.toFixed(1)} · min {gate.min}
         </div>
       </div>
     </div>

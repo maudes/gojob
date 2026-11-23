@@ -7,9 +7,9 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from gojob import config, files
+from gojob import config, files, scoring
 from gojob.docx_io import docx_to_text, text_to_docx
-from gojob.main import app
+from gojob.api import app
 from tests.conftest import RESUME
 
 JD = (
@@ -53,6 +53,7 @@ def test_state_reports_version_models_and_selftest(client):
     body = client.get("/api/state").json()
     assert body["config"]["live"] is False
     assert body["config"]["appVersion"] == config.app_version()
+    assert body["config"]["thresholds"] == scoring.thresholds()
     assert all(t["pass"] for t in body["config"]["tests"])
     assert {"profile", "health", "analyses", "tracker", "coach", "scout"} <= set(body)
 
@@ -179,7 +180,7 @@ def test_google_doc_link_is_fetched_as_word_and_keeps_the_layout(client, resume,
         asked.append(url)
         return _Reply(text_to_docx(resume + "\nPersonal: alex@example.com"))
 
-    monkeypatch.setattr("gojob.main.httpx.get", fake_get)
+    monkeypatch.setattr("gojob.api.httpx.get", fake_get)
     got = client.post("/api/resume-link", json={"link": DOC_LINK})
     assert got.status_code == 200
     body = got.json()
@@ -189,7 +190,7 @@ def test_google_doc_link_is_fetched_as_word_and_keeps_the_layout(client, resume,
 
 
 def test_a_link_that_is_not_shared_gets_a_clear_message(client, monkeypatch):
-    monkeypatch.setattr("gojob.main.httpx.get", lambda *_a, **_k: _Reply(b"<html><title>Sign in</title></html>", 200))
+    monkeypatch.setattr("gojob.api.httpx.get", lambda *_a, **_k: _Reply(b"<html><title>Sign in</title></html>", 200))
     res = client.post("/api/resume-link", json={"link": DOC_LINK})
     assert res.status_code == 422 and "Anyone with the link" in res.json()["error"]
 
@@ -201,7 +202,7 @@ def test_resume_link_refuses_other_sites_and_survives_network_errors(client, mon
     def down(*_a, **_k):
         raise httpx.ConnectError("offline")
 
-    monkeypatch.setattr("gojob.main.httpx.get", down)
+    monkeypatch.setattr("gojob.api.httpx.get", down)
     assert client.post("/api/resume-link", json={"link": DOC_LINK}).status_code == 502
 
 
@@ -217,7 +218,7 @@ def test_resume_download_without_any_saved_resume_still_builds_a_file(client, sa
 
 
 def test_pdf_export_explains_when_libreoffice_is_missing(client, saved, monkeypatch):
-    monkeypatch.setattr("gojob.main.docx_to_pdf", lambda _d: None)
+    monkeypatch.setattr("gojob.api.docx_to_pdf", lambda _d: None)
     res = client.get("/api/export", params={"kind": "resume", "format": "pdf"})
     assert res.status_code == 501 and "LibreOffice" in res.json()["error"]
 
@@ -342,14 +343,14 @@ def test_fine_tune_is_refused_once_tuning_has_hit_its_ceiling(client, saved):
     rec = analyze(client)
     first = client.post("/api/run", json={"kind": "action", "lang": "en", "id": rec["id"], "action": "fineTune"}).json()["record"]
     assert first["ceiling"] is None
-    from gojob import pipeline as pl
+    from gojob import scoring
     from gojob.store import update_db
 
     def stall(d: dict) -> None:
         r = d["analyses"][0]
         ft = r["actions"]["fineTune"]
         ft["evidenceBacked"] = 0  # nothing the resume supports is left
-        ft["basedOn"] = pl.text_key(r["tailoredText"] or d["profile"]["resumeText"])
+        ft["basedOn"] = scoring.text_key(r["tailoredText"] or d["profile"]["resumeText"])
 
     update_db(stall)
     state = client.get("/api/state").json()

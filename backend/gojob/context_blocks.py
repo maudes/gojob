@@ -1,15 +1,12 @@
-"""What the app puts around the prompts. The prompt text itself lives in skills/ (see skills.py).
-
-This file only builds the data blocks (profile, JD, scan settings) and picks which skill file to use.
-It is fingerprinted by meta.prompt_hash() together with every skill file.
-"""
+"""The data blocks around a prompt (profile, JD, scan settings) and which skill to use.
+The prompt text itself is in skills/."""
 from __future__ import annotations
 
 from datetime import date
 from typing import Literal
 
-from .skills import skill
-from .text import redact
+from .skill_loader import skill
+from .text_tools import redact
 
 Lang = Literal["en", "zh"]
 
@@ -61,18 +58,18 @@ def jd_block(jd: str) -> str:
 
 # ---------- Scoring reviewers and auditors ----------
 
-# Reviewer id shown in the interface -> its file in skills/score-panel/.
+# Reviewer id shown in the interface -> its file in skills/panel-scorer.md.
 PANEL_LENSES = {"ATS": "ats", "Recruiter": "recruiter", "Hiring manager": "hiring-manager"}
 # The five fidelity auditors. The number is a product rule (all five must pass), so it is fixed here, not by counting files.
 AUDIT_FOCUS = ("focus-1", "focus-2", "focus-3", "focus-4", "focus-5")
 
 
 def panel_role(reviewer: str, target: Literal["profile", "jd"]) -> str:
-    return skill("score-panel", lens=skill(f"score-panel#{PANEL_LENSES[reviewer]}"), what=skill(f"score-panel#what-{target}"))
+    return skill("panel-scorer", lens=skill(f"panel-scorer#{PANEL_LENSES[reviewer]}"), what=skill(f"panel-scorer#what-{target}"))
 
 
 def audit_role(focus: str) -> str:
-    return skill("audit", focus=skill(f"audit#{focus}"))
+    return skill("auditor", focus=skill(f"auditor#{focus}"))
 
 
 # ---------- Job scout ----------

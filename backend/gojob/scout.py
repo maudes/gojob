@@ -1,23 +1,19 @@
-"""Step 2: the headhunter scan.
-
-A capable agent searches the web for openings and companies that fit the saved profile; the app
-then opens every job link itself, checks every resume quote, and five auditors review what the
-report says about the candidate.
-"""
+"""Step 2, headhunter scan: web search for openings, then link, quote and audit checks."""
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-from . import demo
-from . import prompts as P
-from .claude import AgentError, has_credentials, run_with_search
+from . import context_blocks as P
+from .model_client import AgentError, has_credentials, run_with_search
 from .extract import is_safe_url
 from .jobpage import read_job_page
-from .meta import stamp
-from .pipeline import check_quotes, demo_audit, now_iso, parse_loose_json, with_audit
+from .version_stamp import stamp
+from .audit import check_quotes, demo_audit, with_audit
+from .store import now_iso
+from .tasks import parse_loose_json
 from .schemas import CompanyOpenings, ScoutReport
-from .text import redact
+from .text_tools import redact
 
 MAX_JOBS = 8
 MAX_COMPANIES = 5

@@ -1,9 +1,4 @@
-"""Resume files on disk.
-
-Each scope ("pending" upload, "master" profile resume, "jd-<id>" tailored copy) holds either the
-original .docx or, for other formats, the full raw text. These keep the contact details so
-downloads are complete; they are never sent to a model.
-"""
+"""Resume files on disk (uploaded original, master copy, per-JD tailored copy). Never sent to a model."""
 from __future__ import annotations
 
 import re
@@ -13,7 +8,7 @@ from typing import Literal
 
 from . import config
 from .docx_io import apply_changes_to_docx, text_to_docx
-from .text import apply_to_text
+from .text_tools import apply_to_text
 
 
 def _file(scope: str, ext: Literal["docx", "txt"]) -> Path:

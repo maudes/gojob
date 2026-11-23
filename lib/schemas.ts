@@ -240,6 +240,10 @@ export type Networking = z.infer<typeof Networking>;
 
 /* ---------- Stored records ---------- */
 
+/** Score thresholds from the backend (scoring.py). The browser holds no numbers of its own. */
+export type JDThresholds = { average: number; min: number; tuneFrom: number };
+export type Thresholds = { health: { average: number; min: number }; jd: JDThresholds };
+
 export type Gate = {
   kind: "panel";
   scores: number[];

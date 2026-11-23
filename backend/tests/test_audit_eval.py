@@ -7,9 +7,9 @@ import sys
 
 import pytest
 
-from gojob import config, pipeline as pl
+from gojob import audit, config
 from gojob.schemas import CoverLetter, FineTune, JDAnalysis
-from gojob.text import redact
+from gojob.text_tools import redact
 
 sys.path.insert(0, str(config.ROOT))
 from evals import audit_run as A  # noqa: E402
@@ -38,7 +38,7 @@ def test_cases_cover_the_three_tasks_and_every_check():
 def test_the_correct_answer_is_valid_and_every_quote_in_it_is_word_for_word(case_id):
     case = CASES[case_id]
     SCHEMA[case["task"]].model_validate(case["clean"])
-    check = pl.check_quotes(case["clean"], sources(case))
+    check = audit.check_quotes(case["clean"], sources(case))
     assert check["failed"] == [] and check["total"] > 0
 
 
@@ -61,7 +61,7 @@ def test_every_fault_is_real_and_changes_only_what_it_says(case_id):
             assert planted in text and planted not in clean_json, f"{fault['id']}: {planted!r} is not what the fault adds"
         # A quote fault must really break a quote; every other fault must leave the quotes intact, so each
         # fault tests one thing and the code-level quote proof is not what catches it.
-        broken = bool(pl.check_quotes(faulty, sources(case))["failed"])
+        broken = bool(audit.check_quotes(faulty, sources(case))["failed"])
         assert broken == bool(set(fault["expectChecks"]) & QUOTE_CHECKS), f"{fault['id']}: breaks a quote only when it says so"
 
 
@@ -158,7 +158,7 @@ def test_the_command_needs_a_key_and_a_yes(monkeypatch, capsys):
 def test_comparing_runs_marks_what_got_worse_and_names_the_changed_skill(tmp_path, capsys):
     def run(recall_blocked: int, audit_hash: str) -> dict:
         key = "fine-tune-thermostat/invented-metric"
-        return {"meta": {"appVersion": "1", "promptHash": audit_hash, "git": "x", "skills": {"audit": audit_hash, "scout": "same"}},
+        return {"meta": {"appVersion": "1", "promptHash": audit_hash, "git": "x", "skills": {"auditor": audit_hash, "scout": "same"}},
                 "summary": {"recall": recall_blocked / 3, "falseAlarm": 0.0, "byFault": {key: {"blocked": recall_blocked, "runs": 3, "expectedHits": 0, "task": "fineTune"}}}}
 
     a, b = tmp_path / "a.json", tmp_path / "b.json"
@@ -166,7 +166,7 @@ def test_comparing_runs_marks_what_got_worse_and_names_the_changed_skill(tmp_pat
     b.write_text(json.dumps(run(1, "bbbbbb")))
     assert A.compare(str(a), str(b)) == 1
     out = capsys.readouterr().out
-    assert "skills changed: audit" in out and "WORSE" in out
+    assert "skills changed: auditor" in out and "WORSE" in out
     assert A.compare(str(a), str(a)) == 0
 
 

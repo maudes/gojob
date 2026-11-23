@@ -3,7 +3,7 @@
 The app already audits every answer while you use it (five auditors plus a word-for-word quote check). That protects one answer.
 **This folder answers a different question: is the system accurate overall, and did a change make it better or worse?**
 
-Run it before a release, and after any change to a prompt, a model or the pipeline.
+Run it before a release, and after any change to a prompt, a model or the audit flow.
 
 ## Three kinds of checking
 
@@ -107,3 +107,7 @@ Every result and every run carries one short fingerprint per skill (`meta.skills
 - Ten cases is a start. Add a case every time a real answer goes wrong; that is the best source of new ones.
 - Token cost is not measured, only time.
 - The graders were tested against hand-written good and bad outputs (`backend/tests/test_evals.py`). They have not yet been run against real model answers, so expect to adjust them after the first live run.
+
+## Runner
+
+Evaluation runs call the Claude API. Results made with the subagent runner (`meta.runner: "subagent"`, see the README) are not API results: do not mix them into a run you want to compare.

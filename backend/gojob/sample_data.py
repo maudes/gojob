@@ -1,11 +1,7 @@
-"""Sample output shown when no API key is configured, so the whole flow can be clicked through.
-
-Scores, the job and the people are invented. The sample resume changes are built from the
-user's own resume lines so accepting and exporting them really works.
-"""
+"""Invented sample output for when there is no API key, so the whole flow can be clicked through."""
 from __future__ import annotations
 
-from .text import editable_lines
+from .text_tools import editable_lines
 
 NONE = {"source": "none", "quote": ""}
 

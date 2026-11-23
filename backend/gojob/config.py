@@ -1,4 +1,4 @@
-"""Paths, models and the app version. One place, so nothing else reads the environment."""
+"""Paths, models and app version. The only place that reads the environment."""
 from __future__ import annotations
 
 import json
@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = ROOT / "data"
 FILES_DIR = DATA_DIR / "files"
 DB_FILE = DATA_DIR / "db.json"
+MANUAL_DIR = DATA_DIR / "manual"  # request and answer files of a subagent run (private, not committed)
 SKILLS_DIR = Path(__file__).resolve().parent / "skills"
 
 # Same file the Next.js app used, so an existing setup keeps working.
@@ -23,8 +24,14 @@ REVIEWER_MODEL = os.environ.get("REVIEWER_MODEL") or "claude-haiku-5-5"
 SCHEMA_VERSION = 1
 
 
+def runner() -> str:
+    """Who answers a model call: "api" (default, the Claude API) or "subagent" (Claude Code subagents, through files).
+    Set GOJOB_RUNNER=subagent for the command line tool only; see subagent_runner.py."""
+    return "subagent" if os.environ.get("GOJOB_RUNNER") == "subagent" else "api"
+
+
 def has_credentials() -> bool:
-    return bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+    return runner() == "subagent" or bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
 
 
 def app_version() -> str:

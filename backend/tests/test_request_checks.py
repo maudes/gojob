@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from gojob.main import app
+from gojob.api import app
 
 
 @pytest.fixture

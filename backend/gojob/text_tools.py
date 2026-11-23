@@ -1,4 +1,4 @@
-"""Text helpers: contact redaction, verbatim checks, applying accepted changes."""
+"""Text helpers: contact redaction, word-for-word quote check, applying changes, layout lock."""
 from __future__ import annotations
 
 import re

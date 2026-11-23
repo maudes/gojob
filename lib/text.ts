@@ -1,5 +1,6 @@
 /** Helpers shared by server and browser. No Node-only imports here. */
 import { diffWordsWithSpace } from "diff";
+import type { JDThresholds } from "./schemas.ts";
 
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const PHONE = /(?<![\w/.-])\+?\d[\d\s().-]{7,}\d(?![\w/-])/g;
@@ -49,10 +50,15 @@ export function diffOps(before: string, after: string): DiffOp[] {
   return out;
 }
 
-/** Matching gate tiers for one JD. */
-export function tier(average: number, min: number): "apply" | "tune" | "risky" {
-  if (average >= 80 && min >= 70) return "apply";
-  return average >= 60 ? "tune" : "risky";
+/** Matching gate tiers for one JD. The numbers come from the backend (scoring.py), never from here. */
+export function tier(average: number, min: number, rule: JDThresholds): "apply" | "tune" | "risky" {
+  if (average >= rule.average && min >= rule.min) return "apply";
+  return average >= rule.tuneFrom ? "tune" : "risky";
+}
+
+/** Fill {name} placeholders in an interface string, after it has been translated. */
+export function fill(text: string, values: Record<string, string | number>): string {
+  return text.replace(/\{(\w+)\}/g, (whole, key: string) => (key in values ? String(values[key]) : whole));
 }
 
 /** Apply accepted changes to plain text. Returns the new text and the changes that could not be found. */

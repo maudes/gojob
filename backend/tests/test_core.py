@@ -8,11 +8,12 @@ import pytest
 from gojob import config, store
 from gojob.docx_io import apply_changes_to_docx, docx_to_text, text_to_docx
 from gojob.extract import drive_download_url, google_resume_url, html_to_text, is_safe_url
-from gojob.meta import prompt_hash, skill_hashes, stamp
-from gojob.pipeline import check_quotes, gate, is_approved, round_half_up
+from gojob.version_stamp import prompt_hash, skill_hashes, stamp
+from gojob.audit import check_quotes, is_approved
+from gojob.scoring import gate, round_half_up
 from gojob.scout import keep_linked
 from gojob.selftest import self_test
-from gojob.text import apply_to_text, editable_lines, is_layout_line, is_verbatim, keep_editable, redact
+from gojob.text_tools import apply_to_text, editable_lines, is_layout_line, is_verbatim, keep_editable, redact
 
 
 def test_every_runtime_selftest_passes():
@@ -139,7 +140,7 @@ def test_stamp_names_release_prompts_and_models():
 
 
 def test_prompt_hash_changes_when_a_skill_file_changes(tmp_path, monkeypatch):
-    monkeypatch.setattr("gojob.meta.SKILLS_DIR", tmp_path)
+    monkeypatch.setattr("gojob.version_stamp.SKILLS_DIR", tmp_path)
     (tmp_path / "demo.md").write_text("v1")
     before = prompt_hash()
     (tmp_path / "demo.md").write_text("version 2")  # no restart and no cache to clear
@@ -236,7 +237,7 @@ def test_keep_editable_drops_only_changes_on_structure_lines():
 
 
 def test_sample_changes_never_pick_a_structure_line():
-    from gojob.demo import health
+    from gojob.sample_data import health
 
     for change in health(RESUME)["changes"]:
         line = next(ln for ln in RESUME.split("\n") if change["find"] in ln)
@@ -254,8 +255,8 @@ def test_google_resume_link_becomes_a_word_download():
 
 
 def test_each_skill_has_its_own_fingerprint_that_follows_what_it_includes(tmp_path, monkeypatch):
-    monkeypatch.setattr("gojob.meta.SKILLS_DIR", tmp_path)
-    monkeypatch.setattr("gojob.skills.SKILLS_DIR", tmp_path)
+    monkeypatch.setattr("gojob.version_stamp.SKILLS_DIR", tmp_path)
+    monkeypatch.setattr("gojob.skill_loader.SKILLS_DIR", tmp_path)
 
     def write(name: str, body: str) -> None:
         (tmp_path / f"{name}.md").write_text(f"---\nname: {name}\ndescription: a test skill for fingerprints\n---\n\n{body}")
@@ -280,5 +281,5 @@ def test_each_skill_has_its_own_fingerprint_that_follows_what_it_includes(tmp_pa
 
 def test_real_skills_have_fingerprints_and_the_stamp_carries_them():
     hashes = skill_hashes()
-    assert {"audit", "health-check", "shared-rules", "scout"} <= set(hashes)
+    assert {"auditor", "health-check", "shared-rules", "scout"} <= set(hashes)
     assert stamp()["skills"] == hashes

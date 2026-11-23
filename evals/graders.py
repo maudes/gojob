@@ -10,8 +10,8 @@ import json
 import re
 from typing import Any, Callable
 
-from gojob.pipeline import check_quotes
-from gojob.text import redact
+from gojob.audit import check_quotes
+from gojob.text_tools import redact
 
 Results = dict[str, dict]  # task name -> a pipeline result ({"output": ..., "approved": ..., ...}) or {"error": "..."}
 

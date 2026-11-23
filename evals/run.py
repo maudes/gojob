@@ -24,11 +24,12 @@ sys.path[:0] = [str(ROOT), str(ROOT / "backend")]
 
 from evals import graders  # noqa: E402
 from evals.common import print_skill_changes  # noqa: E402
-from gojob import pipeline as pl  # noqa: E402
-from gojob.claude import has_credentials  # noqa: E402
-from gojob.meta import stamp  # noqa: E402
+from gojob import tasks  # noqa: E402
+from gojob.store import now_iso  # noqa: E402
+from gojob.model_client import has_credentials  # noqa: E402
+from gojob.version_stamp import stamp  # noqa: E402
 from gojob.schemas import Profile  # noqa: E402
-from gojob.text import redact  # noqa: E402
+from gojob.text_tools import redact  # noqa: E402
 
 CASES_DIR = Path(__file__).with_name("cases")
 RUNS_DIR = Path(__file__).with_name("runs")
@@ -45,7 +46,7 @@ def load_cases(ids: list[str] | None = None) -> list[dict]:
 
 
 def profile_for(case: dict) -> dict:
-    return {**Profile().dump(), **case["profile"], "resumeText": redact(case["resume"]), "savedAt": pl.now_iso()}
+    return {**Profile().dump(), **case["profile"], "resumeText": redact(case["resume"]), "savedAt": now_iso()}
 
 
 def _trim(result: dict, seconds: float) -> dict:
@@ -70,12 +71,12 @@ def run_case(case: dict) -> dict:
         started = time.perf_counter()
         try:
             if task == "jdAnalysis":
-                res = pl.analyze_jd(profile, profile["resumeText"], case["jd"], lang, 1)
+                res = tasks.analyze_jd(profile, profile["resumeText"], case["jd"], lang, 1)
                 analysis = res["analysis"]
                 results[task] = _trim(analysis, time.perf_counter() - started)
             else:
                 record = {"actions": {}, "analysis": analysis, "jdText": case["jd"], "tailoredText": None}
-                res = pl.run_action(task, profile, record, lang, case.get("motivation", ""))
+                res = tasks.run_action(task, profile, record, lang, case.get("motivation", ""))
                 results[task] = _trim(res, time.perf_counter() - started)
         except Exception as err:  # noqa: BLE001 - a failing task is a result, not a crash
             results[task] = {"error": f"{type(err).__name__}: {err}"}

@@ -1,4 +1,4 @@
-"""Everything lives in one local JSON file. Nothing leaves this machine except model calls."""
+"""data/db.json: the one local file everything is saved in, with a data version and upgrades."""
 from __future__ import annotations
 
 import copy
@@ -8,6 +8,7 @@ import random
 import string
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Any, Callable, TypeVar
 
 from . import config
@@ -99,6 +100,10 @@ def update_db(fn: Callable[[dict], T]) -> T:
         tmp.write_text(json.dumps(db, indent=2, ensure_ascii=False), "utf8")
         os.replace(tmp, config.DB_FILE)
         return result
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
 
 def new_id() -> str:

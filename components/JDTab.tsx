@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ActionKind, AnalysisRecord, TrackerRow } from "@/lib/schemas";
-import { tier, today, trackerTSV } from "@/lib/text";
+import { fill, tier, today, trackerTSV } from "@/lib/text";
 import { PeopleList } from "./People";
 import { ResumeReview, type Accepted } from "./ResumeReview";
 import { api, AuditBox, Btn, copy, download, LabelBadge, Quote, RetryButton, Reviewers, saveBlob, send, useApp, Working } from "./ui";
@@ -110,7 +110,7 @@ function Result({ record, onDeleted }: { record: AnalysisRecord; onDeleted: () =
   const failed = record.analysis.quoteCheck.failed;
   const resume = record.tailoredText ?? state.profile.resumeText;
   const changed = resume !== record.assessedText;
-  const [dotClass, tierLabel] = TIER[tier(record.gate.average, record.gate.min)];
+  const [dotClass, tierLabel] = TIER[tier(record.gate.average, record.gate.min, state.config.thresholds.jd)];
   const first = record.history[0]?.average ?? record.gate.average;
   const delta = record.gate.average - first;
 
@@ -192,7 +192,7 @@ function Result({ record, onDeleted }: { record: AnalysisRecord; onDeleted: () =
           <div className="big">{record.gate.average.toFixed(1)}</div>
           <div className="grow">
             <div className="light"><span className={dotClass} />{t(tierLabel)}</div>
-            <div className="sub">{t("Apply: average ≥ 80 and every reviewer ≥ 70 · fine-tune and re-assess: average 60 or more · below 60 risky, suggest not applying")}</div>
+            <div className="sub">{fill(t("Apply: average ≥ {average} and every reviewer ≥ {min} · fine-tune and re-assess: average {tuneFrom} or more · below {tuneFrom} risky, suggest not applying"), state.config.thresholds.jd)}</div>
             <div className="sub">
               {t("Assessment history")}: {record.history.map((h, i) => `v${i + 1} ${h.average.toFixed(1)}`).join(" → ")}
               {record.history.length > 1 && ` (${delta >= 0 ? "+" : ""}${delta.toFixed(1)})`}

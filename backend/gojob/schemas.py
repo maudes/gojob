@@ -1,9 +1,4 @@
-"""Shapes of everything a model must return, plus the profile.
-
-Python names are snake_case; on the wire (the browser, data/db.json and the model's JSON)
-they are camelCase, exactly as the first version of the app used them. Stored records are
-plain dicts in that camelCase form, so existing data keeps loading.
-"""
+"""The shape of every model answer and of the profile. camelCase on the wire and in data/db.json."""
 from __future__ import annotations
 
 from typing import Annotated, Literal

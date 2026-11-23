@@ -12,7 +12,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from gojob.claude import run_json
+from gojob.model_client import run_json
 from gojob.config import MAIN_MODEL
 
 RUBRIC = Path(__file__).with_name("rubrics") / "usefulness.md"

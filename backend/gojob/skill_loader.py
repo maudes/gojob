@@ -1,16 +1,5 @@
-"""Skills: every prompt the app sends to a model, in plain-text files.
-
-    skills/<name>.md            one skill: a small header (name, description, variables), then the prompt
-    ## part: <part>             inside a file, starts a named part (a language rule, one auditor's focus, ...)
-
-The text before the first `## part:` line is the skill's main prompt; each part is a smaller piece the code
-picks at run time. Refer to them as "name" or "name#part".
-
-A skill is read from disk every time it is used, so an edit applies to the next request without a restart.
-Two markers are understood inside the text:
-    {{include:name#part}}       pastes another skill or part here (shared rules live in one place)
-    {{variable}}                filled in by the caller; the header's `variables:` line lists them
-"""
+"""Loads skills/<name>.md (every prompt) or one `## part:` of it; pastes {{include:...}}, fills {{variable}}.
+Read from disk on every use. Format: skills/README.md."""
 from __future__ import annotations
 
 import re

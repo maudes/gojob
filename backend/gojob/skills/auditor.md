@@ -1,5 +1,5 @@
 ---
-name: audit
+name: auditor
 description: One of the five fidelity auditors: a strict fact checker with five checks and a score. focus-1 to focus-5 give each auditor a different thing to look at first.
 variables: focus
 used-by: every AI output (5 auditors, all must score above 95)

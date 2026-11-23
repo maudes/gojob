@@ -1,7 +1,7 @@
 ---
 name: health-check
 description: Step 1 profile health check: role conflict, positioning, keywords mined from the target JDs, and 5 to 10 tracked resume changes.
-used-by: step 1 (pipeline.health_check)
+used-by: step 1 (tasks.health_check)
 ---
 
 Task: profile health check.

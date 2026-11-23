@@ -31,12 +31,13 @@ sys.path[:0] = [str(ROOT), str(ROOT / "backend")]
 
 from evals.common import print_skill_changes  # noqa: E402
 from evals.run import git_state  # noqa: E402
-from gojob import pipeline as pl  # noqa: E402
-from gojob import prompts as P  # noqa: E402
-from gojob.claude import has_credentials  # noqa: E402
-from gojob.meta import stamp  # noqa: E402
+from gojob.audit import AUDIT_PASS_ABOVE, is_approved, run_audits  # noqa: E402
+from gojob.store import now_iso  # noqa: E402
+from gojob import context_blocks as P  # noqa: E402
+from gojob.model_client import has_credentials  # noqa: E402
+from gojob.version_stamp import stamp  # noqa: E402
 from gojob.schemas import Profile  # noqa: E402
-from gojob.text import redact  # noqa: E402
+from gojob.text_tools import redact  # noqa: E402
 
 AUDIT_DIR = Path(__file__).with_name("audit")
 RUNS_DIR = Path(__file__).with_name("runs")
@@ -86,7 +87,7 @@ def variants(case: dict) -> list[dict]:
 
 def context_for(case: dict) -> str:
     """What the auditors receive as sources, built the way the app builds it for this task."""
-    profile = {**Profile().dump(), **case["profile"], "resumeText": redact(case["resume"]), "savedAt": pl.now_iso()}
+    profile = {**Profile().dump(), **case["profile"], "resumeText": redact(case["resume"]), "savedAt": now_iso()}
     context = f"{P.profile_block(profile, profile['resumeText'])}\n{P.jd_block(case['jd'])}"
     if case["task"] == "coverLetter":
         context += f'\n<MOTIVATION note="written by the candidate, treat as confirmed">\n{redact(case.get("motivation", ""))}\n</MOTIVATION>'
@@ -95,7 +96,7 @@ def context_for(case: dict) -> str:
 
 def audit_once(context: str, output: dict, lang: str) -> list[dict]:
     """One run of the five auditors, exactly as in the app. Tests replace this."""
-    return pl.run_audits(context, output, lang)
+    return run_audits(context, output, lang)
 
 
 def judge(case: dict, variant: dict, context: str) -> dict:
@@ -107,7 +108,7 @@ def judge(case: dict, variant: dict, context: str) -> dict:
         "scores": [a["score"] for a in audits],
         "failedChecks": failed,
         "issues": [i for a in audits for i in a["issues"]],
-        "blocked": not pl.is_approved(audits, {"failed": []}),  # quote proof is a separate code check, so only the auditors are judged here
+        "blocked": not is_approved(audits, {"failed": []}),  # quote proof is a separate code check, so only the auditors are judged here
         "expectedHits": sum(1 for f in failed if expected & set(f)),
         "seconds": round(time.perf_counter() - started, 1),
     }
@@ -157,7 +158,7 @@ def summarise(results: dict[str, dict]) -> dict:
 
 def print_report(run: dict) -> None:
     s, m = run["summary"], run["meta"]
-    print(f"\nGo Job auditor eval · v{m['appVersion']} · audit skill {m['skills'].get('audit', '?')} · prompts {m['promptHash']} · {m['git']} · {m['repeats']} repeat(s)")
+    print(f"\nGo Job auditor eval · v{m['appVersion']} · audit skill {m['skills'].get('auditor', '?')} · prompts {m['promptHash']} · {m['git']} · {m['repeats']} repeat(s)")
     print(f"{'planted fault':58} {'blocked':>9} {'by right check':>15}")
     for key, f in sorted(s["byFault"].items()):
         flag = "  <-- MISSED" if f["blocked"] < f["runs"] else ""
@@ -165,7 +166,7 @@ def print_report(run: dict) -> None:
     pct = lambda x: "-" if x is None else f"{x:.0%}"  # noqa: E731
     print(f"\nrecall (faulty answers blocked): {pct(s['recall'])}   needs {MIN_RECALL:.0%}")
     print(f"false alarm (correct answers blocked): {pct(s['falseAlarm'])}   allowed {MAX_FALSE_ALARM:.0%}")
-    print(f"mean auditor score: correct {s['meanScoreClean']}, faulty {s['meanScoreFaulty']}   (the app needs every score above {pl.AUDIT_PASS_ABOVE})")
+    print(f"mean auditor score: correct {s['meanScoreClean']}, faulty {s['meanScoreFaulty']}   (the app needs every score above {AUDIT_PASS_ABOVE})")
     for task, t in sorted(s["byTask"].items()):
         print(f"  {task:12} faulty blocked {t['faultBlocked']}/{t['faultRuns']}   correct blocked {t['cleanBlocked']}/{t['cleanRuns']}")
     if s["missed"]:
@@ -177,7 +178,7 @@ def print_report(run: dict) -> None:
 
 def compare(a_path: str, b_path: str) -> int:
     a, b = (json.loads(Path(p).read_text("utf8")) for p in (a_path, b_path))
-    print(f"A: v{a['meta']['appVersion']} audit {a['meta']['skills'].get('audit', '?')} {a['meta']['git']}   B: v{b['meta']['appVersion']} audit {b['meta']['skills'].get('audit', '?')} {b['meta']['git']}")
+    print(f"A: v{a['meta']['appVersion']} audit {a['meta']['skills'].get('auditor', '?')} {a['meta']['git']}   B: v{b['meta']['appVersion']} audit {b['meta']['skills'].get('auditor', '?')} {b['meta']['git']}")
     print_skill_changes(a["meta"], b["meta"])
     pct = lambda x: "-" if x is None else f"{x:.0%}"  # noqa: E731
     worse = 0
@@ -229,7 +230,7 @@ def main() -> int:
     run["summary"] = summarise(results)
     print_report(run)
     RUNS_DIR.mkdir(exist_ok=True)
-    name = f"audit_{started.strftime('%Y%m%dT%H%M%S')}_v{run['meta']['appVersion']}_a{run['meta']['skills'].get('audit', 'x')}.json"
+    name = f"audit_{started.strftime('%Y%m%dT%H%M%S')}_v{run['meta']['appVersion']}_a{run['meta']['skills'].get('auditor', 'x')}.json"
     (RUNS_DIR / name).write_text(json.dumps(run, indent=1, ensure_ascii=False), "utf8")
     print("saved", RUNS_DIR.relative_to(ROOT) / name)
     return 0 if run["summary"]["ok"] else 1

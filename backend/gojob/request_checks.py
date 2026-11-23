@@ -1,12 +1,4 @@
-"""The shape of every JSON request body. FastAPI checks a request against these before a route runs,
-so a wrong type is answered with a clear 400 instead of failing somewhere inside the route.
-
-Rules that keep the browser code working unchanged:
-- Unknown fields are ignored.
-- Every field is optional and may be null; a route decides what it needs for the `kind` it was sent.
-- Values a route already cleans up itself (a tracker status outside the list, an over-long note)
-  stay plain strings here, so they are ignored or trimmed there rather than rejected.
-"""
+"""The shape of every JSON request body, checked before a route runs (wrong type: clear 400)."""
 from __future__ import annotations
 
 from typing import Any, Literal
@@ -19,6 +11,9 @@ from .schemas import Model
 Lang = Literal["en", "zh"]
 
 
+# Rules that keep the browser code working unchanged: unknown fields are ignored; every field is optional and may
+# be null (a route decides what it needs for the `kind` it was sent); values a route already cleans up itself
+# stay plain strings here, so they are trimmed there rather than rejected.
 class Req(Model):
     """Base for request bodies. `body()` gives the route a plain dict of the fields that were sent."""
 

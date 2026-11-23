@@ -20,7 +20,7 @@ Runs on your own computer. Your data stays in the `data/` folder.
 - **Honest by design.** Rewrites cannot add numbers, tools or titles. Code checks that every quote appears word for word in your resume or the JD, and five auditors review each answer.
 - **Your resume keeps its layout.** Keep it in Google Docs and fetch it by link: the app edits the Word copy in place, never touches the name, section titles, employers, titles or dates, and every suggested change has a Copy button to paste back into your doc.
 - **It knows when to stop.** Tuning only rewords what your resume already shows. When that no longer helps, the job stops at "Ceiling reached" instead of gaming the score.
-- **Local first.** One JSON file, no account, no background jobs.
+- **Local first.** One JSON file, no account, no background jobs. It answers through the Claude API or, from the command line, through Claude Code subagents.
 
 ## How a job moves
 
@@ -28,9 +28,9 @@ Runs on your own computer. Your data stays in the `data/` folder.
 
 ## How it is built
 
-![Next.js screens, FastAPI backend, four AI roles, an audit gate, and local files](docs/img/architecture.svg)
+![The web page and the command line, the Python backend, skill files, four AI roles, the model client, a layout lock and audit gate, and local files](docs/img/architecture.svg)
 
-The screens only draw. A Python backend does all the AI work, and every answer passes the audit gate before it is saved. More diagrams: [docs/architecture.md](docs/architecture.md).
+There are two ways in: the web page, which only draws, and the command line. A Python backend does all the AI work, and every answer passes the layout lock and the audit gate before it is saved. More diagrams: [docs/architecture.md](docs/architecture.md).
 
 ## Key decisions
 
@@ -38,6 +38,7 @@ The screens only draw. A Python backend does all the AI work, and every answer p
 |---|---|
 | **Fixed pipeline, not an LLM orchestrator** | Every button already says what to do, so code routes it: no extra model call, same path every time, easy to test. Only web search lets the model choose. |
 | **Strong writer, cheap auditors** | Opus writes and scores; five Haiku auditors check the result in parallel. |
+| **Two ways to answer, one set of rules** | The code decides what to ask and whether the answer passes. Only who answers differs: the Claude API (default), or Claude Code subagents through files, for people without an API key. |
 | **Proof over polish** | Quote checks are code, so they are exact and repeatable. |
 | **Measured, not assumed** | `npm run eval` runs synthetic cases built to provoke mistakes. `npm run eval:audit` plants mistakes on purpose to see how many the five auditors catch. Changes can be compared before release. |
 
@@ -48,7 +49,8 @@ Prompts, gates and evals are plain files in the repo, so you can tune GoJob to y
 | What | Where |
 |---|---|
 | **Prompts**: every AI role, including how the resume is reworded with the JD's keywords | `backend/gojob/skills/` (one file per prompt, [index](backend/gojob/skills/README.md)) |
-| **Gates**: the apply rule, the tuning ceiling, the audit pass mark | `backend/gojob/pipeline.py` |
+| **Gates**: the health-check and apply thresholds, the tuning ceiling | `backend/gojob/scoring.py` (every score threshold is in this one file) |
+| **Audit pass mark**: how high the five auditors must score | `backend/gojob/audit.py` (`AUDIT_PASS_ABOVE`) |
 | **Evals**: traps, rubrics, your own scores, planted mistakes for the auditors | `evals/cases/`, `evals/rubrics/`, `evals/labels/`, `evals/audit/` |
 
 1. Create a branch and change a prompt or a gate.
@@ -65,7 +67,9 @@ Every saved result carries the app version, a fingerprint of all prompts and one
 3. Copy `.env.example` to `.env.local` and add your `ANTHROPIC_API_KEY`.
 4. Run `npm run dev` and open http://localhost:3210.
 
-Without a key the app opens in sample mode, and every result says so.
+Without a key the web app opens in sample mode, and every result says so.
+
+**No API key?** Use Claude Code instead. Ask it to run GoJob by subagent (the `run-gojob` skill), or run `npm run gojob -- analyze-jd --runner subagent --run NAME --jd-file JD.txt` and let subagents answer the request files it writes. This assesses one job description and is not available in the web app. Paths are relative to `backend/`. Results are stamped `runner: subagent`, so keep them out of API eval runs. The requests and answers sit in `data/manual/NAME/` (git-ignored, private); delete the folder when you are done.
 
 ## Background and status
 

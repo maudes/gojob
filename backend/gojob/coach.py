@@ -1,18 +1,17 @@
-"""Interview coach: one question at a time, a 30-second and a 2-minute version,
-short feedback on English and content, and a history that brings weak areas back more often.
-"""
+"""Step 5, interview coach: one practice question at a time, feedback, weekly report."""
 from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timezone
 
-from . import prompts as P
-from .claude import has_credentials, run_json
+from . import context_blocks as P
+from .model_client import has_credentials, run_json
 from .config import MAIN_MODEL
-from .meta import stamp
-from .pipeline import clamp_score, demo_audit, with_audit
+from .version_stamp import stamp
+from .audit import demo_audit, with_audit
+from .scoring import clamp_score
 from .schemas import CoachFeedback, CoachQuestion, CoachReport
-from .text import is_verbatim, redact
+from .text_tools import is_verbatim, redact
 
 CATEGORIES = ["self_intro", "behavioral", "general", "story", "jd", "product"]
 #: Roughly what fits when spoken at a calm pace.

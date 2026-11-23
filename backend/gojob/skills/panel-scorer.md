@@ -1,5 +1,5 @@
 ---
-name: score-panel
+name: panel-scorer
 description: One scoring reviewer. The three lenses (ATS, recruiter, hiring manager) are separate files; what-profile.md or what-jd.md says what is being scored.
 variables: lens, what
 used-by: step 1 and step 3 scoring (three reviewers, then audited)
