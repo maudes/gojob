@@ -1,0 +1,36 @@
+name: Tests
+
+# The same checks as `npm test` and `npm run typecheck`. None of them calls the Claude API,
+# so no key is needed and nothing is spent.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: typecheck and web tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # The web tests run TypeScript directly, which needs Node 22.18 or newer.
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:web
+
+  backend:
+    name: backend tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # --frozen: use exactly the versions in uv.lock, so CI tests what you tested.
+      - name: Test
+        working-directory: backend
+        run: uv run --frozen pytest

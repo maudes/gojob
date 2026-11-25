@@ -63,8 +63,9 @@ Every saved result carries the app version, a fingerprint of all prompts and one
 ## Security and maintenance
 
 - **Dependencies are audited automatically.** On every push and pull request, and every Monday, GitHub Actions runs `npm audit` on `package-lock.json` and `pip-audit` on the versions pinned in `backend/uv.lock` ([workflow](.github/workflows/security.yml)). A new advisory can turn the check red even when nothing changed; what to do is in the [guide](docs/guide.md#security-checks-and-maintenance).
-- **Your data never enters git.** `data/` (resume, jobs, runs) and `.env.local` are git-ignored, and the CI job only reads the lockfiles.
-- **Not covered yet:** secret scanning, code scanning and Dependabot are not turned on, and CI does not run the tests; run `npm test` locally.
+- **Tests run on every push too.** The type check, the web tests and the backend tests run in CI without calling the Claude API ([workflow](.github/workflows/tests.yml)).
+- **Your data never enters git.** `data/` (resume, jobs, runs) and `.env.local` are git-ignored, and GitHub secret scanning with push protection is on, so a pushed API key is blocked.
+- **Not covered yet:** code scanning and Dependabot are not turned on, and `main` is not branch-protected.
 
 ## Quick start
 

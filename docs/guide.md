@@ -52,8 +52,13 @@ The screens (`app/`, `components/`) never call Claude. They only call `/api/...`
 |---|---|---|---|
 | `npm audit` | Looks up every package in `package-lock.json` in the npm advisory database; fails on any known advisory | every push and pull request, and Mondays 03:00 UTC | `.github/workflows/security.yml` |
 | `pip-audit` | Exports the versions pinned in `backend/uv.lock` and checks them against PyPI advisories | same | same |
+| Tests | `npm run typecheck`, `npm run test:web` and the backend `pytest`, on the exact versions in the lockfiles. No Claude API calls, so no key and no cost | every push and pull request | `.github/workflows/tests.yml` |
+| Secret scanning | GitHub looks for API keys and tokens in what you push, and push protection refuses the push | on every push | repository settings (Code security) |
 
 **When a check turns red**
+- *Tests or type check:* open the failed run, reproduce it with `npm test` and `npm run typecheck`, fix, push. CI uses Node 22 and the versions in the lockfiles, so a failure that does not reproduce locally usually means your local packages differ from the lockfile: run `npm ci` and `uv sync --frozen` in `backend/` and try again.
+- *A blocked push (secret scanning):* the push is refused and names the file. Remove the key from the commit (not just from the next one), and treat that key as leaked: revoke it and make a new one.
+- *Dependency audit:*
 1. Open the failed run on the Actions tab and read which package and which advisory.
 2. Update that package and its lockfile: `npm update PACKAGE` (or `npm audit fix`) for the web side; `uv lock --upgrade-package PACKAGE` inside `backend/` for the Python side.
 3. Run `npm test` and `npm run typecheck`, then push. If no fixed version exists yet, note the advisory in the changelog and decide whether the affected code path is used before ignoring it.
@@ -64,10 +69,8 @@ The screens (`app/`, `components/`) never call Claude. They only call `/api/...`
 - Never commit `.env.local` or anything under `data/`. Both are git-ignored; check `git status` before a commit if you add new files.
 
 **Not covered yet** (all optional, and free for a public repository)
-- GitHub **secret scanning** and **push protection** (Settings, Code security): blocks a pushed API key. Currently off.
 - **Dependabot** alerts and version updates, which open the update pull requests for you. Currently off.
 - **Code scanning** (CodeQL) for the Python and TypeScript source.
-- **Tests in CI**: `npm test` and `npm run typecheck` make no API calls, so they are safe to run on every push.
 - **Branch protection** on `main`, so a red check blocks a merge, and a `SECURITY.md` saying where to report a vulnerability.
 
 ## Versions and releases
