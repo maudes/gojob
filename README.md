@@ -60,6 +60,12 @@ Prompts, gates and evals are plain files in the repo, so you can tune GoJob to y
 
 Every saved result carries the app version, a fingerprint of all prompts and one per skill, so you can always tell which prompt produced it. When a real answer goes wrong, add it as a new eval case.
 
+## Security and maintenance
+
+- **Dependencies are audited automatically.** On every push and pull request, and every Monday, GitHub Actions runs `npm audit` on `package-lock.json` and `pip-audit` on the versions pinned in `backend/uv.lock` ([workflow](.github/workflows/security.yml)). A new advisory can turn the check red even when nothing changed; what to do is in the [guide](docs/guide.md#security-checks-and-maintenance).
+- **Your data never enters git.** `data/` (resume, jobs, runs) and `.env.local` are git-ignored, and the CI job only reads the lockfiles.
+- **Not covered yet:** secret scanning, code scanning and Dependabot are not turned on, and CI does not run the tests; run `npm test` locally.
+
 ## Quick start
 
 1. Install Node.js 20 or newer and [uv](https://docs.astral.sh/uv/) (`brew install uv`).

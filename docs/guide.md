@@ -46,6 +46,30 @@ The screens (`app/`, `components/`) never call Claude. They only call `/api/...`
 
 `npm run eval` measures how accurate the AI is, using synthetic cases built to provoke specific mistakes. `npm run eval:audit` tests the five auditors by planting mistakes on purpose. Both are separate from the tests and cost API money on a real run. See [evals/README.md](../evals/README.md).
 
+## Security checks and maintenance
+
+| Check | What it does | When | Where |
+|---|---|---|---|
+| `npm audit` | Looks up every package in `package-lock.json` in the npm advisory database; fails on any known advisory | every push and pull request, and Mondays 03:00 UTC | `.github/workflows/security.yml` |
+| `pip-audit` | Exports the versions pinned in `backend/uv.lock` and checks them against PyPI advisories | same | same |
+
+**When a check turns red**
+1. Open the failed run on the Actions tab and read which package and which advisory.
+2. Update that package and its lockfile: `npm update PACKAGE` (or `npm audit fix`) for the web side; `uv lock --upgrade-package PACKAGE` inside `backend/` for the Python side.
+3. Run `npm test` and `npm run typecheck`, then push. If no fixed version exists yet, note the advisory in the changelog and decide whether the affected code path is used before ignoring it.
+
+**Keeping it running**
+- The weekly run exists because advisories appear for versions that were clean when you committed them. GitHub pauses scheduled workflows in a public repository after 60 days without activity; if the Actions tab says so, re-enable the workflow there or push a commit.
+- About once a month: `npm outdated`, `uv lock --upgrade` in `backend/`, then `npm test`, and `npm run eval -- --yes --compare` if a model-facing package such as `anthropic` moved.
+- Never commit `.env.local` or anything under `data/`. Both are git-ignored; check `git status` before a commit if you add new files.
+
+**Not covered yet** (all optional, and free for a public repository)
+- GitHub **secret scanning** and **push protection** (Settings, Code security): blocks a pushed API key. Currently off.
+- **Dependabot** alerts and version updates, which open the update pull requests for you. Currently off.
+- **Code scanning** (CodeQL) for the Python and TypeScript source.
+- **Tests in CI**: `npm test` and `npm run typecheck` make no API calls, so they are safe to run on every push.
+- **Branch protection** on `main`, so a red check blocks a merge, and a `SECURITY.md` saying where to report a vulnerability.
+
 ## Versions and releases
 
 - The release version is `version` in `package.json`, following [semantic versioning](https://semver.org/): patch for fixes, minor for new features, major for changes that break saved data.
